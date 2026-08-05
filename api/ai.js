@@ -1,9 +1,15 @@
 // /api/ai.js — Vercel Serverless Function
-// Genereert AI-analyse via Deepseek API (met Claude Haiku als fallback)
-// API-keys nooit in frontend — enkel via process.env
+// Genereert AI-analyse via Deepseek (primair), Groq (secundair), Claude Haiku (fallback)
 
 const DEEPSEEK_BASE = 'https://api.deepseek.com/v1';
+const GROQ_BASE     = 'https://api.groq.com/openai/v1';
 const CLAUDE_BASE   = 'https://api.anthropic.com/v1';
+
+// 402 = no balance, 429 = rate limit — beide reden om naar volgende provider te gaan
+const SKIP_CODES = ['402', '429'];
+function shouldFallback(errMsg) {
+  return SKIP_CODES.some(c => errMsg.includes(`HTTP ${c}`));
+}
 
 const SYSTEM_PROMPT = `You are a senior equity research analyst writing objective, data-driven investment reports in Dutch. Follow the tone and structure of a sell-side equity research report. Be specific and concise. Avoid vague statements. Base your analysis strictly on the data provided — do not invent figures. Always return valid JSON only, with no markdown formatting, no preamble, and no text outside the JSON object.`;
 
@@ -11,11 +17,11 @@ function buildUserPrompt(financial, peers, ticker, horizon) {
   const q  = financial.quote   || {};
   const p  = financial.profile || {};
   const r  = financial.ratios  || {};
+  const km = financial.keyMetrics || {};
   const e  = financial.estimates || {};
   const c  = financial.consensus || {};
   const inc = financial.income || [];
 
-  // Financials per jaar
   const incRows = inc.slice(0, 3).reverse().map(y => {
     const rev = y.revenue ? (y.revenue / 1e6).toFixed(0) + 'M' : '—';
     const ni  = y.netIncome ? (y.netIncome / 1e6).toFixed(0) + 'M' : '—';
@@ -24,7 +30,6 @@ function buildUserPrompt(financial, peers, ticker, horizon) {
     return `  FY${y.calendarYear}: Rev=${rev} | NI=${ni} | GrossMargin=${gm} | NetMargin=${nm}`;
   }).join('\n');
 
-  // Peers
   const peerTable = (peers || []).map(p => {
     const pq = p.quote  || {};
     const pr = p.ratios || {};
@@ -32,6 +37,16 @@ function buildUserPrompt(financial, peers, ticker, horizon) {
   }).join('\n');
 
   const bal = (financial.balance || [])[0] || {};
+
+  // Merge ratios + keyMetrics voor rijkere context
+  const peRatio   = r.peRatioTTM          ?? km.peRatioTTM;
+  const pegRatio  = r.pegRatioTTM         ?? km.pegRatioTTM;
+  const psRatio   = r.priceToSalesRatioTTM ?? km.priceToSalesRatioTTM;
+  const evEbitda  = r.enterpriseValueMultipleTTM ?? km.evToEbitdaTTM;
+  const roe       = r.returnOnEquityTTM   ?? km.roeTTM;
+  const roa       = r.returnOnAssetsTTM   ?? km.roaTTM;
+  const de        = r.debtEquityRatioTTM  ?? km.debtToEquityTTM;
+  const cr        = r.currentRatioTTM     ?? km.currentRatioTTM;
 
   return `
 Analyze the following company for a ${horizon}-month investment horizon:
@@ -48,8 +63,8 @@ Market Cap: $${q.marketCap ? (q.marketCap/1e9).toFixed(2)+'B' : '—'} | Beta: $
 Day Change: ${q.changesPercentage?.toFixed(2)||'—'}%
 
 --- VALUATION RATIOS (TTM) ---
-P/E: ${r.peRatioTTM?.toFixed(1)||'—'}x | PEG: ${r.pegRatioTTM?.toFixed(2)||'—'} | P/S: ${r.priceToSalesRatioTTM?.toFixed(1)||'—'}x | EV/EBITDA: ${r.enterpriseValueMultipleTTM?.toFixed(1)||'—'}x
-ROE: ${r.returnOnEquityTTM ? (r.returnOnEquityTTM*100).toFixed(1)+'%' : '—'} | ROA: ${r.returnOnAssetsTTM ? (r.returnOnAssetsTTM*100).toFixed(1)+'%' : '—'}
+P/E: ${peRatio?.toFixed(1)||'—'}x | PEG: ${pegRatio?.toFixed(2)||'—'} | P/S: ${psRatio?.toFixed(1)||'—'}x | EV/EBITDA: ${evEbitda?.toFixed(1)||'—'}x
+ROE: ${roe ? (roe*100).toFixed(1)+'%' : '—'} | ROA: ${roa ? (roa*100).toFixed(1)+'%' : '—'}
 
 --- FINANCIALS (last 3 fiscal years) ---
 ${incRows || 'Data niet beschikbaar'}
@@ -57,7 +72,7 @@ ${incRows || 'Data niet beschikbaar'}
 --- BALANCE SHEET ---
 Total Debt: ${bal.totalDebt ? '$'+(bal.totalDebt/1e6).toFixed(0)+'M' : '—'}
 Cash & Equivalents: ${bal.cashAndCashEquivalents ? '$'+(bal.cashAndCashEquivalents/1e6).toFixed(0)+'M' : '—'}
-Debt/Equity: ${r.debtEquityRatioTTM?.toFixed(2)||'—'} | Current Ratio: ${r.currentRatioTTM?.toFixed(2)||'—'}
+Debt/Equity: ${de?.toFixed(2)||'—'} | Current Ratio: ${cr?.toFixed(2)||'—'}
 
 --- FORWARD ESTIMATES (consensus) ---
 Revenue FY+1 est.: ${e.estimatedRevenue ? '$'+(e.estimatedRevenue/1e6).toFixed(0)+'M' : '—'}
@@ -112,13 +127,12 @@ Return ONLY valid JSON (no markdown, no preamble):
 `.trim();
 }
 
+// ── Provider calls ──────────────────────────────────────────────────────────
+
 async function callDeepseek(prompt, key) {
   const res = await fetch(`${DEEPSEEK_BASE}/chat/completions`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${key}`,
-    },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
     body: JSON.stringify({
       model: 'deepseek-chat',
       max_tokens: 3000,
@@ -129,12 +143,33 @@ async function callDeepseek(prompt, key) {
       ],
     }),
   });
-
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     throw new Error(`Deepseek HTTP ${res.status}: ${body.slice(0, 200)}`);
   }
+  const data = await res.json();
+  const text = data.choices?.[0]?.message?.content || '';
+  return JSON.parse(text.replace(/```json|```/g, '').trim());
+}
 
+async function callGroq(prompt, key) {
+  const res = await fetch(`${GROQ_BASE}/chat/completions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: 3000,
+      temperature: 0.3,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user',   content: prompt },
+      ],
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Groq HTTP ${res.status}: ${body.slice(0, 200)}`);
+  }
   const data = await res.json();
   const text = data.choices?.[0]?.message?.content || '';
   return JSON.parse(text.replace(/```json|```/g, '').trim());
@@ -155,16 +190,16 @@ async function callClaudeHaiku(prompt, key) {
       messages: [{ role: 'user', content: prompt }],
     }),
   });
-
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     throw new Error(`Claude HTTP ${res.status}: ${body.slice(0, 200)}`);
   }
-
   const data = await res.json();
   const text = data.content?.map(b => b.text || '').join('') || '';
   return JSON.parse(text.replace(/```json|```/g, '').trim());
 }
+
+// ── Main handler ────────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -174,10 +209,11 @@ export default async function handler(req, res) {
   if (req.method !== 'POST')   return res.status(405).json({ error: 'Method not allowed' });
 
   const deepseekKey = process.env.DEEPSEEK_API_KEY;
+  const groqKey     = process.env.GROQ_API_KEY;
   const claudeKey   = process.env.ANTHROPIC_API_KEY;
 
-  if (!deepseekKey && !claudeKey) {
-    return res.status(500).json({ error: 'Geen AI API-key geconfigureerd (DEEPSEEK_API_KEY of ANTHROPIC_API_KEY)' });
+  if (!deepseekKey && !groqKey && !claudeKey) {
+    return res.status(500).json({ error: 'Geen AI API-key geconfigureerd (DEEPSEEK_API_KEY, GROQ_API_KEY of ANTHROPIC_API_KEY)' });
   }
 
   let body;
@@ -194,42 +230,49 @@ export default async function handler(req, res) {
 
   const prompt = buildUserPrompt(financial, peers, ticker, horizon || 12);
 
-  // Timeout wrapper
   const withTimeout = (promise, ms) =>
     Promise.race([
       promise,
       new Promise((_, rej) => setTimeout(() => rej(new Error('AI timeout na ' + ms/1000 + 's')), ms)),
     ]);
 
-  // Probeer eerst Deepseek, dan Claude als fallback
-  try {
-    let result;
+  // Provider chain: Deepseek → Groq → Claude Haiku
+  // Fallback bij HTTP 402 (no balance) of 429 (rate limit)
+  const providers = [
+    deepseekKey && { name: 'Deepseek', call: () => callDeepseek(prompt, deepseekKey) },
+    groqKey     && { name: 'Groq',     call: () => callGroq(prompt, groqKey) },
+    claudeKey   && { name: 'Claude',   call: () => callClaudeHaiku(prompt, claudeKey) },
+  ].filter(Boolean);
 
-    if (deepseekKey) {
-      try {
-        result = await withTimeout(callDeepseek(prompt, deepseekKey), 30000);
-      } catch (e) {
-        console.warn('[ai] Deepseek mislukt, probeer Claude fallback:', e.message);
-        if (!claudeKey) throw e;
-        result = await withTimeout(callClaudeHaiku(prompt, claudeKey), 30000);
+  let lastError;
+  for (const provider of providers) {
+    try {
+      console.log(`[ai] Probeer ${provider.name}...`);
+      const result = await withTimeout(provider.call(), 30000);
+
+      // Herbereken scorecard total
+      if (result.scorecard) {
+        const keys = ['growth_rate','valuation_peg','profitability','balance_sheet','market_position','management','catalyst_pipeline','risk_profile'];
+        result.scorecard.total = keys.reduce((sum, k) => sum + (result.scorecard[k]?.score || 0), 0);
       }
-    } else {
-      result = await withTimeout(callClaudeHaiku(prompt, claudeKey), 30000);
-    }
 
-    // Bereken total als die ontbreekt of fout is
-    if (result.scorecard) {
-      const keys = ['growth_rate','valuation_peg','profitability','balance_sheet','market_position','management','catalyst_pipeline','risk_profile'];
-      result.scorecard.total = keys.reduce((sum, k) => sum + (result.scorecard[k]?.score || 0), 0);
-    }
+      console.log(`[ai] Succes via ${provider.name}`);
+      return res.status(200).json(result);
 
-    res.status(200).json(result);
-
-  } catch (err) {
-    console.error('[ai]', err);
-    if (err.message?.includes('timeout')) {
-      return res.status(504).json({ error: 'AI-analyse duurde te lang. Probeer opnieuw.' });
+    } catch (err) {
+      lastError = err;
+      if (shouldFallback(err.message)) {
+        console.warn(`[ai] ${provider.name} overgeslagen (${err.message.split(':')[1]?.trim()}), volgende provider...`);
+        continue;
+      }
+      // Niet-herstelbare fout (bv. parse error, timeout) — stop meteen
+      break;
     }
-    res.status(500).json({ error: 'AI-analyse mislukt: ' + (err.message || 'Onbekende fout') });
   }
+
+  console.error('[ai] Alle providers mislukt:', lastError?.message);
+  if (lastError?.message?.includes('timeout')) {
+    return res.status(504).json({ error: 'AI-analyse duurde te lang. Probeer opnieuw.' });
+  }
+  res.status(500).json({ error: 'AI-analyse mislukt: ' + (lastError?.message || 'Onbekende fout') });
 }
