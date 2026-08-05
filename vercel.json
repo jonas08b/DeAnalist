@@ -4,9 +4,9 @@
     { "source": "/(.*)",       "destination": "/index.html" }
   ],
   "functions": {
-    "api/financials.js": { "maxDuration": 15 },
-    "api/peers.js":      { "maxDuration": 15 },
-    "api/ai.js":         { "maxDuration": 35 }
+    "api/financials": { "maxDuration": 15 },
+    "api/peers":      { "maxDuration": 15 },
+    "api/ai":         { "maxDuration": 35 }
   },
   "headers": [
     {
