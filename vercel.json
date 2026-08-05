@@ -1,18 +1,33 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/:path*" },
-    { "source": "/(.*)",       "destination": "/index.html" }
+    {
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ],
   "functions": {
-    "api/financials": { "maxDuration": 15 },
-    "api/peers":      { "maxDuration": 15 },
-    "api/ai":         { "maxDuration": 35 }
+    "api/financials.js": {
+      "maxDuration": 15
+    },
+    "api/peers.js": {
+      "maxDuration": 15
+    },
+    "api/ai.js": {
+      "maxDuration": 35
+    }
   },
   "headers": [
     {
       "source": "/api/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
       ]
     }
   ]
