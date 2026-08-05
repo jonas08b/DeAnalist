@@ -1,0 +1,9 @@
+{
+  "name": "deanalist",
+  "version": "1.0.0",
+  "description": "AI-gedreven equity research tool — onderdeel van DeBrief",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev"
+  }
+}

@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="/favicon.ico">
+<title>DeAnalist — DeBrief</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&display=swap');
+
+  @font-face {
+    font-family: 'Roobert';
+    src: url('/Roobert-Regular.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'Roobert';
+    src: url('/Roobert-Bold.woff') format('woff');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  :root {
+    --bg: #272a2d;
+    --bg-card: #32363a;
+    --ink: #F0EDE6;
+    --ink-muted: #9A9690;
+    --ink-faint: #5A5750;
+    --accent: #C8311A;
+    --accent-soft: #2E1810;
+    --border: #3e4347;
+    --green: #4ADE80;
+    --green-bg: #0c2010;
+    --red: #F87171;
+    --red-bg: #2E1010;
+    --shadow-card: 0 1px 3px rgba(0,0,0,.2), 0 4px 12px rgba(0,0,0,.15);
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --font-sans: 'Roobert','DM Sans',-apple-system,system-ui,sans-serif;
+    --font-serif: 'DM Serif Display','Georgia',serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; -webkit-text-size-adjust: 100%; width: 100%; overflow-x: hidden; scrollbar-width: none; }
+  html::-webkit-scrollbar { display: none; }
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    overscroll-behavior: none;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+    scrollbar-width: none;
+  }
+  body::-webkit-scrollbar { display: none; }
+
+  /* ── HEADER ── */
+  .header {
+    position: sticky; top: 0; left: 0; right: 0; z-index: 100;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: calc(var(--safe-top) + 14px) 20px 14px;
+  }
+  .header-top { display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-family: var(--font-serif); font-size: 28px; letter-spacing: -.5px; line-height: 1; text-decoration: none; color: inherit; }
+  .logo span { color: var(--accent); }
+  .logo-back { font-size: 13px; color: var(--ink-muted); margin-left: 6px; }
+  .header-actions { display: flex; align-items: center; gap: 8px; }
+  .header-chip {
+    font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 20px;
+    background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent);
+  }
+
+  /* ── MAIN CONTENT ── */
+  .main {
+    max-width: 680px; margin: 0 auto;
+    padding: 24px 14px calc(var(--safe-bottom) + 32px);
+  }
+
+  /* ── SEARCH BOX ── */
+  .search-section {
+    margin-bottom: 28px;
+    animation: fadeUp .35s ease both;
+  }
+  .search-headline {
+    font-family: var(--font-serif); font-size: 26px; line-height: 1.25;
+    letter-spacing: -.3px; color: var(--ink); margin-bottom: 6px;
+  }
+  .search-sub {
+    font-size: 13px; color: var(--ink-muted); margin-bottom: 18px; line-height: 1.5;
+  }
+  .search-row {
+    display: flex; gap: 10px; align-items: stretch;
+  }
+  .search-input-wrap {
+    flex: 1; position: relative;
+  }
+  .ticker-input {
+    width: 100%; height: 52px;
+    background: var(--bg-card); border: 1.5px solid var(--border);
+    border-radius: 14px; padding: 0 16px;
+    font-family: var(--font-sans); font-size: 16px; font-weight: 600;
+    color: var(--ink); letter-spacing: .04em; text-transform: uppercase;
+    outline: none; -webkit-appearance: none;
+    transition: border-color .15s;
+  }
+  .ticker-input::placeholder { text-transform: none; font-weight: 400; letter-spacing: 0; color: var(--ink-faint); }
+  .ticker-input:focus { border-color: var(--accent); }
+
+  .horizon-select {
+    height: 52px; width: 88px; flex-shrink: 0;
+    background: var(--bg-card); border: 1.5px solid var(--border);
+    border-radius: 14px; padding: 0 12px;
+    font-family: var(--font-sans); font-size: 13px; font-weight: 600;
+    color: var(--ink-muted); outline: none; cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239A9690' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center; background-size: 16px;
+    transition: border-color .15s;
+  }
+  .horizon-select:focus { border-color: var(--accent); }
+
+  .generate-btn {
+    height: 52px; padding: 0 22px; flex-shrink: 0;
+    background: var(--accent); border: none; border-radius: 14px;
+    font-family: var(--font-sans); font-size: 14px; font-weight: 700;
+    color: #fff; cursor: pointer; letter-spacing: .02em;
+    transition: background .15s, transform .1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .generate-btn:hover { background: #a82814; }
+  .generate-btn:active { transform: scale(.97); }
+  .generate-btn:disabled { background: var(--ink-faint); cursor: default; transform: none; }
+
+  /* ── ERROR BANNER ── */
+  .error-banner {
+    background: var(--red-bg); border: 1px solid #5c2020;
+    border-radius: 12px; padding: 12px 16px;
+    font-size: 13px; color: var(--red); margin-bottom: 16px;
+    display: none;
+  }
+  .error-banner.visible { display: block; }
+
+  /* ── LOADING ── */
+  .loading-screen {
+    display: none; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 40vh; gap: 16px;
+  }
+  .loading-screen.visible { display: flex; }
+  .spinner {
+    width: 32px; height: 32px; border: 2.5px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .load-steps { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+  .load-step {
+    font-size: 13px; color: var(--ink-faint);
+    transition: color .3s;
+  }
+  .load-step.active { color: var(--ink-muted); }
+  .load-step.done { color: var(--green); }
+
+  /* ── RAPPORT ── */
+  .rapport-wrap { display: none; animation: fadeUp .4s ease both; }
+  .rapport-wrap.visible { display: block; }
+
+  /* Rapport toolbar */
+  .rapport-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 18px; gap: 10px;
+  }
+  .rapport-ticker-badge {
+    font-family: var(--font-serif); font-size: 20px; letter-spacing: -.2px; color: var(--ink);
+  }
+  .rapport-ticker-badge span { color: var(--accent); }
+  .toolbar-actions { display: flex; gap: 8px; }
+  .toolbar-btn {
+    height: 36px; padding: 0 14px;
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+    font-family: var(--font-sans); font-size: 12px; font-weight: 600; color: var(--ink-muted);
+    cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 6px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .toolbar-btn:hover { border-color: var(--ink-faint); color: var(--ink); }
+  .toolbar-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+  .toolbar-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .toolbar-btn.primary:hover { background: #a82814; }
+
+  /* Rapport kaart */
+  .rapport-card {
+    background: var(--bg-card); border-radius: 18px;
+    border: 1px solid var(--border); overflow: hidden;
+    box-shadow: var(--shadow-card);
+    margin-bottom: 14px;
+    animation: fadeUp .35s ease both;
+  }
+
+  /* Cover sectie */
+  .rapport-cover {
+    background: linear-gradient(135deg, #1a1d20 0%, #272a2d 100%);
+    padding: 28px 24px 24px; border-bottom: 1px solid var(--border);
+  }
+  .cover-eyebrow {
+    font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 8px;
+  }
+  .cover-name {
+    font-family: var(--font-serif); font-size: 28px; line-height: 1.2;
+    letter-spacing: -.3px; color: var(--ink); margin-bottom: 4px;
+  }
+  .cover-ticker {
+    font-size: 13px; color: var(--ink-muted); margin-bottom: 16px;
+  }
+  .cover-meta-row {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .rating-badge {
+    font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 20px;
+  }
+  .rating-buy   { background: var(--green-bg); color: var(--green); border: 1px solid #1a4a20; }
+  .rating-hold  { background: #231500; color: #F0A040; border: 1px solid #3a2500; }
+  .rating-sell  { background: var(--red-bg); color: var(--red); border: 1px solid #5c2020; }
+  .cover-price {
+    font-size: 22px; font-weight: 700; color: var(--ink); margin-left: auto;
+  }
+  .cover-change {
+    font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 6px;
+  }
+  .cover-change.pos { background: var(--green-bg); color: var(--green); }
+  .cover-change.neg { background: var(--red-bg); color: var(--red); }
+  .cover-change.neu { background: var(--border); color: var(--ink-muted); }
+  .cover-date { font-size: 11px; color: var(--ink-faint); margin-left: 6px; }
+
+  /* Key metrics row */
+  .key-metrics {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    border-top: 1px solid var(--border);
+  }
+  .metric-cell {
+    padding: 16px 14px; border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .metric-cell:last-child { border-right: none; }
+  .metric-label { font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
+  .metric-value { font-size: 15px; font-weight: 700; color: var(--ink); }
+  .metric-sub { font-size: 11px; color: var(--ink-muted); }
+
+  /* Sectie padding */
+  .rapport-section { padding: 20px 24px; border-bottom: 1px solid var(--border); }
+  .rapport-section:last-child { border-bottom: none; }
+  .section-label {
+    font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-faint); margin-bottom: 10px;
+  }
+  .section-text {
+    font-size: 14px; line-height: 1.7; color: var(--ink-muted);
+  }
+
+  /* Executive Summary */
+  .exec-summary {
+    font-size: 15px; line-height: 1.75; color: var(--ink);
+    font-style: italic;
+  }
+
+  /* Thesis items */
+  .thesis-item {
+    display: flex; gap: 14px; padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .thesis-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .thesis-item:first-child { padding-top: 0; }
+  .thesis-num {
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    background: var(--accent-soft); border: 1px solid #5c1a0a;
+    width: 24px; height: 24px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .thesis-title { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 5px; }
+  .thesis-body { font-size: 13px; line-height: 1.6; color: var(--ink-muted); }
+
+  /* Financials table */
+  .fin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .fin-table th {
+    text-align: right; font-size: 10px; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--ink-faint); padding: 0 0 10px 12px;
+  }
+  .fin-table th:first-child { text-align: left; padding-left: 0; }
+  .fin-table td {
+    text-align: right; padding: 10px 0 10px 12px;
+    border-top: 1px solid var(--border); color: var(--ink-muted);
+  }
+  .fin-table td:first-child { text-align: left; padding-left: 0; font-weight: 600; color: var(--ink); }
+  .fin-table tr:last-child td { border-bottom: 1px solid var(--border); }
+
+  /* Valuation / peers tabel */
+  .val-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .val-table th {
+    text-align: right; font-size: 10px; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--ink-faint); padding: 0 0 10px 10px;
+  }
+  .val-table th:first-child { text-align: left; padding-left: 0; }
+  .val-table td {
+    text-align: right; padding: 10px 0 10px 10px;
+    border-top: 1px solid var(--border); color: var(--ink-muted);
+  }
+  .val-table td:first-child { text-align: left; padding-left: 0; font-weight: 600; color: var(--ink); }
+  .val-table tr.highlight td { color: var(--ink); background: rgba(200,49,26,.07); }
+
+  /* Risico tabel */
+  .risk-item {
+    display: flex; gap: 12px; padding: 12px 0;
+    border-bottom: 1px solid var(--border); align-items: flex-start;
+  }
+  .risk-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .risk-item:first-child { padding-top: 0; }
+  .risk-badge {
+    font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    padding: 3px 7px; border-radius: 4px; white-space: nowrap; flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .risk-high   { background: var(--red-bg); color: var(--red); border: 1px solid #5c2020; }
+  .risk-medium { background: #231500; color: #F0A040; border: 1px solid #3a2500; }
+  .risk-low    { background: var(--green-bg); color: var(--green); border: 1px solid #1a4a20; }
+  .risk-factor { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+  .risk-desc   { font-size: 12px; line-height: 1.55; color: var(--ink-muted); }
+
+  /* Analyst consensus */
+  .consensus-row {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px;
+  }
+  .consensus-cell {
+    background: var(--bg); border-radius: 12px; padding: 14px;
+    border: 1px solid var(--border); text-align: center;
+  }
+  .consensus-label { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 6px; }
+  .consensus-value { font-size: 18px; font-weight: 700; color: var(--ink); }
+  .consensus-sub   { font-size: 11px; color: var(--ink-muted); margin-top: 3px; }
+
+  /* Scorecard */
+  .scorecard-total {
+    text-align: center; padding: 20px 0 16px;
+    border-bottom: 1px solid var(--border); margin-bottom: 20px;
+  }
+  .scorecard-score {
+    font-family: var(--font-serif); font-size: 52px; line-height: 1; color: var(--ink);
+  }
+  .scorecard-score span { font-size: 22px; color: var(--ink-muted); font-family: var(--font-sans); }
+  .scorecard-label { font-size: 13px; color: var(--ink-muted); margin-top: 6px; }
+  .scorecard-grid { display: flex; flex-direction: column; gap: 10px; }
+  .scorecard-row { display: flex; align-items: center; gap: 12px; }
+  .scorecard-name {
+    font-size: 12px; font-weight: 600; color: var(--ink-muted);
+    width: 130px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .scorecard-bar-wrap {
+    flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden;
+  }
+  .scorecard-bar {
+    height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent) 0%, #e84a30 100%);
+    transition: width .8s cubic-bezier(.4,0,.2,1);
+  }
+  .scorecard-pts { font-size: 12px; font-weight: 700; color: var(--ink); width: 28px; text-align: right; flex-shrink: 0; }
+  .scorecard-rationale { font-size: 11px; color: var(--ink-faint); margin-top: 2px; padding-left: 142px; }
+
+  /* Disclaimer */
+  .disclaimer {
+    font-size: 11px; line-height: 1.6; color: var(--ink-faint);
+    padding: 16px 24px; background: var(--bg); border-top: 1px solid var(--border);
+  }
+
+  /* Skeleton state */
+  .skeleton {
+    background: linear-gradient(90deg, var(--border) 25%, var(--bg-card) 50%, var(--border) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 6px;
+    display: inline-block;
+  }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Cache indicator */
+  .cache-pill {
+    font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px;
+    background: var(--border); color: var(--ink-faint); letter-spacing: .04em;
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .key-metrics { grid-template-columns: repeat(2, 1fr); }
+    .metric-cell:nth-child(2) { border-right: none; }
+    .metric-cell:nth-child(3) { border-top: 1px solid var(--border); }
+    .cover-meta-row { flex-wrap: wrap; }
+    .cover-price { margin-left: 0; width: 100%; margin-top: 8px; }
+    .rapport-section { padding: 16px 16px; }
+    .rapport-cover { padding: 22px 16px 18px; }
+    .scorecard-name { width: 100px; font-size: 11px; }
+    .scorecard-rationale { padding-left: 112px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <a href="/" class="logo">De<span>Analist</span></a>
+    <div class="header-actions">
+      <span class="header-chip">Beta</span>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- ZOEK SECTIE -->
+  <div class="search-section">
+    <div class="search-headline">Equity Research<br>op aanvraag</div>
+    <div class="search-sub">Typ een ticker en ontvang een volledig analistenrapport — live data, AI-analyse, scorecard.</div>
+
+    <div class="search-row">
+      <div class="search-input-wrap">
+        <input type="text" id="tickerInput" class="ticker-input" placeholder="bv. ASML, AAPL, NVDA…"
+          autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" maxlength="10">
+      </div>
+      <select id="horizonSelect" class="horizon-select" title="Beleggingshorizon">
+        <option value="6">6M</option>
+        <option value="12" selected>12M</option>
+        <option value="24">24M</option>
+      </select>
+      <button id="generateBtn" class="generate-btn" onclick="startGenerate()">Analyseer</button>
+    </div>
+  </div>
+
+  <!-- ERROR -->
+  <div class="error-banner" id="errorBanner"></div>
+
+  <!-- LOADING -->
+  <div class="loading-screen" id="loadingScreen">
+    <div class="spinner"></div>
+    <div class="load-steps">
+      <div class="load-step" id="step1">Financiële data ophalen…</div>
+      <div class="load-step" id="step2">Peer-vergelijking laden…</div>
+      <div class="load-step" id="step3">AI-analyse genereren…</div>
+      <div class="load-step" id="step4">Rapport samenstellen…</div>
+    </div>
+  </div>
+
+  <!-- RAPPORT -->
+  <div class="rapport-wrap" id="rapportWrap">
+
+    <!-- Toolbar -->
+    <div class="rapport-toolbar">
+      <div class="rapport-ticker-badge" id="rapportBadge">—</div>
+      <div class="toolbar-actions">
+        <span class="cache-pill" id="cachePill" style="display:none">🗄 Cache</span>
+        <button class="toolbar-btn" onclick="nieuwRapport()">
+          <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.8"/></svg>
+          Nieuw
+        </button>
+        <button class="toolbar-btn primary" onclick="exportPDF()" id="pdfBtn">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- Rapport inhoud (wordt dynamisch gevuld) -->
+    <div id="rapportContent"></div>
+
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// DeAnalist — Frontend logica
+// ══════════════════════════════════════════════════════════════════════════════
+
+const CACHE_TTL = 4 * 60 * 60 * 1000; // 4 uur
+let currentData = null; // { ticker, horizon, financial, ai, peers, timestamp }
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function fmt(n, dec = 2) {
+  if (n == null || isNaN(n)) return '—';
+  return Number(n).toLocaleString('nl-BE', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+function fmtM(n) {
+  if (n == null || isNaN(n)) return '—';
+  if (Math.abs(n) >= 1e12) return (n / 1e12).toFixed(2) + 'T';
+  if (Math.abs(n) >= 1e9)  return (n / 1e9).toFixed(2) + 'B';
+  if (Math.abs(n) >= 1e6)  return (n / 1e6).toFixed(1) + 'M';
+  return fmt(n, 0);
+}
+function fmtPct(n) {
+  if (n == null || isNaN(n)) return '—';
+  const s = Number(n) > 0 ? '+' : '';
+  return s + Number(n).toFixed(2) + '%';
+}
+function pctClass(n) {
+  if (n == null) return 'neu';
+  return Number(n) > 0 ? 'pos' : Number(n) < 0 ? 'neg' : 'neu';
+}
+function today() {
+  return new Date().toLocaleDateString('nl-BE', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+// ── Cache ─────────────────────────────────────────────────────────────────────
+function cacheKey(ticker, horizon) {
+  return `deanalist_${ticker.toUpperCase()}_${horizon}`;
+}
+function cacheGet(ticker, horizon) {
+  try {
+    const raw = localStorage.getItem(cacheKey(ticker, horizon));
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (Date.now() - obj.timestamp > CACHE_TTL) { localStorage.removeItem(cacheKey(ticker, horizon)); return null; }
+    return obj;
+  } catch { return null; }
+}
+function cacheSet(ticker, horizon, data) {
+  try {
+    const obj = { ...data, timestamp: Date.now() };
+    localStorage.setItem(cacheKey(ticker, horizon), JSON.stringify(obj));
+  } catch {}
+}
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+function showError(msg) {
+  const el = document.getElementById('errorBanner');
+  el.textContent = msg;
+  el.classList.add('visible');
+}
+function hideError() {
+  document.getElementById('errorBanner').classList.remove('visible');
+}
+function setStep(n) {
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById('step' + i);
+    if (i < n)      el.className = 'load-step done';
+    else if (i === n) el.className = 'load-step active';
+    else            el.className = 'load-step';
+  }
+}
+function showLoading(v) {
+  document.getElementById('loadingScreen').classList.toggle('visible', v);
+  document.getElementById('rapportWrap').classList.toggle('visible', !v);
+  if (v) document.getElementById('rapportWrap').classList.remove('visible');
+}
+function showRapport() {
+  document.getElementById('loadingScreen').classList.remove('visible');
+  document.getElementById('rapportWrap').classList.add('visible');
+}
+
+// ── Invoer ────────────────────────────────────────────────────────────────────
+document.getElementById('tickerInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startGenerate();
+});
+document.getElementById('tickerInput').addEventListener('input', e => {
+  e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9.]/g, '');
+});
+
+// ── Start ─────────────────────────────────────────────────────────────────────
+async function startGenerate() {
+  const ticker  = document.getElementById('tickerInput').value.trim().toUpperCase();
+  const horizon = parseInt(document.getElementById('horizonSelect').value);
+
+  if (!ticker) { showError('Voer een geldige ticker in, bv. ASML of AAPL.'); return; }
+
+  hideError();
+  document.getElementById('generateBtn').disabled = true;
+  document.getElementById('cachePill').style.display = 'none';
+
+  // Cache check
+  const cached = cacheGet(ticker, horizon);
+  if (cached) {
+    currentData = cached;
+    document.getElementById('cachePill').style.display = '';
+    renderRapport(cached);
+    document.getElementById('generateBtn').disabled = false;
+    return;
+  }
+
+  // Show loading
+  showLoading(true);
+  setStep(1);
+
+  try {
+    // Stap 1: financials
+    const finRes = await fetch(`/api/financials?ticker=${encodeURIComponent(ticker)}`);
+    if (!finRes.ok) {
+      const err = await finRes.json().catch(() => ({ error: 'Onbekende fout' }));
+      throw new Error(err.error || `HTTP ${finRes.status}`);
+    }
+    const financial = await finRes.json();
+
+    setStep(2);
+    // Stap 2: peers (parallel in de API call zelf)
+    const peersRes = await fetch(`/api/peers?ticker=${encodeURIComponent(ticker)}`);
+    const peers = peersRes.ok ? await peersRes.json() : [];
+
+    setStep(3);
+    // Stap 3: AI
+    const aiRes = await fetch('/api/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ financial, peers, ticker, horizon })
+    });
+    if (!aiRes.ok) {
+      const err = await aiRes.json().catch(() => ({ error: 'AI fout' }));
+      throw new Error(err.error || 'AI-analyse mislukt');
+    }
+    const ai = await aiRes.json();
+
+    setStep(4);
+
+    const data = { ticker, horizon, financial, peers, ai };
+    cacheSet(ticker, horizon, data);
+    currentData = data;
+
+    renderRapport(data);
+    showRapport();
+
+  } catch (err) {
+    showLoading(false);
+    showError('Fout: ' + (err.message || 'Onbekende fout. Probeer opnieuw.'));
+  } finally {
+    document.getElementById('generateBtn').disabled = false;
+  }
+}
+
+function nieuwRapport() {
+  currentData = null;
+  document.getElementById('rapportWrap').classList.remove('visible');
+  document.getElementById('tickerInput').value = '';
+  document.getElementById('tickerInput').focus();
+  hideError();
+}
+
+// ── Render rapport ────────────────────────────────────────────────────────────
+function renderRapport(data) {
+  const { ticker, horizon, financial: f, peers, ai } = data;
+
+  // Badge
+  const q = f.quote || {};
+  document.getElementById('rapportBadge').innerHTML =
+    `De<span>${ticker}</span> <span style="font-size:14px;color:var(--ink-muted);font-family:var(--font-sans)">— ${horizon}M horizon</span>`;
+
+  // Bepaal rating op basis van AI scorecard total
+  const total = ai?.scorecard?.total ?? 0;
+  let ratingLabel = 'HOLD', ratingClass = 'rating-hold';
+  if (total >= 28) { ratingLabel = 'BUY';  ratingClass = 'rating-buy'; }
+  if (total <= 16) { ratingLabel = 'SELL'; ratingClass = 'rating-sell'; }
+
+  const changeClass = pctClass(q.changesPercentage);
+  const profile = f.profile || {};
+  const income = f.income || [];
+  const balance = f.balance || [];
+  const ratios = f.ratios || {};
+  const estimates = f.estimates || {};
+  const consensus = f.consensus || {};
+
+  // Peer tabel rijen
+  const peerRows = (peers || []).map(p => {
+    const pq = p.quote || {};
+    return `<tr>
+      <td>${p.ticker}</td>
+      <td>${pq.marketCap ? '$' + fmtM(pq.marketCap) : '—'}</td>
+      <td>${p.ratios?.peRatioTTM ? fmt(p.ratios.peRatioTTM, 1) + 'x' : '—'}</td>
+      <td>${p.ratios?.priceToSalesRatioTTM ? fmt(p.ratios.priceToSalesRatioTTM, 1) + 'x' : '—'}</td>
+      <td class="${pctClass(pq.changesPercentage)}">${fmtPct(pq.changesPercentage)}</td>
+    </tr>`;
+  }).join('');
+
+  // Financials tabel
+  const finRows = income.slice(0, 3).reverse().map(y => ({
+    year: y.calendarYear || '—',
+    rev: y.revenue,
+    ni: y.netIncome,
+    gm: y.grossProfitRatio ? (y.grossProfitRatio * 100).toFixed(1) + '%' : '—',
+    nm: y.netIncomeRatio ? (y.netIncomeRatio * 100).toFixed(1) + '%' : '—',
+  }));
+
+  const finYears = finRows.map(r => `<th>${r.year}</th>`).join('');
+  const finRevRow = finRows.map(r => `<td>$${fmtM(r.rev)}</td>`).join('');
+  const finNIRow  = finRows.map(r => `<td>$${fmtM(r.ni)}</td>`).join('');
+  const finGMRow  = finRows.map(r => `<td>${r.gm}</td>`).join('');
+  const finNMRow  = finRows.map(r => `<td>${r.nm}</td>`).join('');
+
+  // Scorecard rijen
+  const scoreKeys = [
+    ['growth_rate','Omzetgroei'],
+    ['valuation_peg','Waardering (PEG)'],
+    ['profitability','Winstgevendheid'],
+    ['balance_sheet','Balans'],
+    ['market_position','Marktpositie'],
+    ['management','Management'],
+    ['catalyst_pipeline','Katalysatoren'],
+    ['risk_profile','Risicoprofiel'],
+  ];
+  const scoreRows = scoreKeys.map(([k, label]) => {
+    const s = ai?.scorecard?.[k];
+    if (!s) return '';
+    const pct = (s.score / 5) * 100;
+    return `
+      <div class="scorecard-row">
+        <div class="scorecard-name">${label}</div>
+        <div class="scorecard-bar-wrap"><div class="scorecard-bar" style="width:${pct}%"></div></div>
+        <div class="scorecard-pts">${s.score}/5</div>
+      </div>
+      <div class="scorecard-rationale">${s.rationale || ''}</div>`;
+  }).join('');
+
+  // Risico's
+  const riskRows = (ai?.risks || []).map(r => `
+    <div class="risk-item">
+      <div class="risk-badge risk-${(r.level||'').toLowerCase()}">${r.level || '?'}</div>
+      <div>
+        <div class="risk-factor">${r.factor || ''}</div>
+        <div class="risk-desc">${r.description || ''}</div>
+      </div>
+    </div>`).join('');
+
+  // Thesis items
+  const thesisItems = (ai?.investment_thesis || []).map((t, i) => `
+    <div class="thesis-item">
+      <div class="thesis-num">${i + 1}</div>
+      <div>
+        <div class="thesis-title">${t.title || ''}</div>
+        <div class="thesis-body">${t.body || ''}</div>
+      </div>
+    </div>`).join('');
+
+  // Target prijs
+  const targetPct = consensus.targetConsensus && q.price
+    ? ((consensus.targetConsensus / q.price - 1) * 100).toFixed(1)
+    : null;
+
+  document.getElementById('rapportContent').innerHTML = `
+    <!-- COVER -->
+    <div class="rapport-card">
+      <div class="rapport-cover">
+        <div class="cover-eyebrow">DeAnalist — Equity Research</div>
+        <div class="cover-name">${profile.companyName || ticker}</div>
+        <div class="cover-ticker">${ticker} · ${profile.exchangeShortName || ''} · ${profile.sector || ''}</div>
+        <div class="cover-meta-row">
+          <span class="rating-badge ${ratingClass}">${ratingLabel}</span>
+          <span style="font-size:12px;color:var(--ink-faint)">Horizon: ${horizon}M</span>
+          ${consensus.targetConsensus ? `<span style="font-size:12px;color:var(--ink-faint)">Doel: $${fmt(consensus.targetConsensus)}</span>` : ''}
+          <div class="cover-price">$${fmt(q.price)}</div>
+          <span class="cover-change ${changeClass}">${fmtPct(q.changesPercentage)}</span>
+          <span class="cover-date">${today()}</span>
+        </div>
+      </div>
+
+      <!-- Key metrics -->
+      <div class="key-metrics">
+        <div class="metric-cell">
+          <div class="metric-label">Market Cap</div>
+          <div class="metric-value">$${fmtM(q.marketCap)}</div>
+          <div class="metric-sub">${profile.sector || ''}</div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-label">52W Range</div>
+          <div class="metric-value">$${fmt(q.yearLow)}–$${fmt(q.yearHigh)}</div>
+          <div class="metric-sub">Huidig: $${fmt(q.price)}</div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-label">Forward P/E</div>
+          <div class="metric-value">${ratios.peRatioTTM ? fmt(ratios.peRatioTTM, 1) + 'x' : '—'}</div>
+          <div class="metric-sub">PEG: ${ratios.pegRatioTTM ? fmt(ratios.pegRatioTTM, 2) : '—'}</div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-label">Beta</div>
+          <div class="metric-value">${q.beta ? fmt(q.beta, 2) : '—'}</div>
+          <div class="metric-sub">Volatiliteit</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXECUTIVE SUMMARY -->
+    <div class="rapport-card">
+      <div class="rapport-section">
+        <div class="section-label">Executive Summary</div>
+        <div class="exec-summary">${ai?.executive_summary || '—'}</div>
+      </div>
+    </div>
+
+    <!-- BEDRIJFSOVERZICHT -->
+    ${profile.description ? `
+    <div class="rapport-card">
+      <div class="rapport-section">
+        <div class="section-label">Bedrijfsoverzicht</div>
+        <div class="section-text">${profile.description}</div>
+      </div>
+    </div>` : ''}
+
+    <!-- FINANCIËLE ANALYSE -->
+    <div class="rapport-card">
+      <div class="rapport-section">
+        <div class="section-label">Financiële Analyse</div>
+        <div class="section-text" style="margin-bottom:16px">${ai?.financial_analysis || '—'}</div>
+
+        ${finRows.length ? `
+        <table class="fin-table">
+          <thead><tr><th>Financieel</th>${finYears}</tr></thead>
+          <tbody>
+            <tr><td>Omzet</td>${finRevRow}</tr>
+            <tr><td>Nettowinst</td>${finNIRow}</tr>
+            <tr><td>Bruto marge</td>${finGMRow}</tr>
+            <tr><td>Netto marge</td>${finNMRow}</tr>
+          </tbody>
+        </table>` : ''}
+
+        ${estimates.estimatedRevenue || estimates.estimatedEps ? `
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+          <div class="section-label" style="margin-bottom:8px">Forward Consensus (FY+1)</div>
+          <div style="display:flex;gap:20px;flex-wrap:wrap">
+            ${estimates.estimatedRevenue ? `<div><span style="font-size:12px;color:var(--ink-faint)">Omzet est.</span><br><span style="font-size:16px;font-weight:700;color:var(--ink)">$${fmtM(estimates.estimatedRevenue)}</span></div>` : ''}
+            ${estimates.estimatedEps ? `<div><span style="font-size:12px;color:var(--ink-faint)">EPS est.</span><br><span style="font-size:16px;font-weight:700;color:var(--ink)">$${fmt(estimates.estimatedEps)}</span></div>` : ''}
+          </div>
+        </div>` : ''}
+      </div>
+    </div>
+
+    <!-- WAARDERING & PEERS -->
+    <div class="rapport-card">
+      <div class="rapport-section">
+        <div class="section-label">Waardering & Peer-vergelijking</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+          <div style="background:var(--bg);border-radius:10px;padding:12px;border:1px solid var(--border)">
+            <div class="metric-label">P/E (TTM)</div>
+            <div style="font-size:17px;font-weight:700;color:var(--ink);margin-top:4px">${ratios.peRatioTTM ? fmt(ratios.peRatioTTM,1)+'x' : '—'}</div>
+          </div>
+          <div style="background:var(--bg);border-radius:10px;padding:12px;border:1px solid var(--border)">
+            <div class="metric-label">P/S (TTM)</div>
+            <div style="font-size:17px;font-weight:700;color:var(--ink);margin-top:4px">${ratios.priceToSalesRatioTTM ? fmt(ratios.priceToSalesRatioTTM,1)+'x' : '—'}</div>
+          </div>
+          <div style="background:var(--bg);border-radius:10px;padding:12px;border:1px solid var(--border)">
+            <div class="metric-label">EV/EBITDA</div>
+            <div style="font-size:17px;font-weight:700;color:var(--ink);margin-top:4px">${ratios.enterpriseValueMultipleTTM ? fmt(ratios.enterpriseValueMultipleTTM,1)+'x' : '—'}</div>
+          </div>
+        </div>
+
+        ${peerRows ? `
+        <div class="section-label" style="margin-bottom:8px">Peers</div>
+        <table class="val-table">
+          <thead><tr><th>Ticker</th><th>Mkt Cap</th><th>P/E</th><th>P/S</th><th>Dag %</th></tr></thead>
+          <tbody>
+            <tr class="highlight">
+              <td>${ticker}</td>
+              <td>${q.marketCap ? '$'+fmtM(q.marketCap) : '—'}</td>
+              <td>${ratios.peRatioTTM ? fmt(ratios.peRatioTTM,1)+'x' : '—'}</td>
+              <td>${ratios.priceToSalesRatioTTM ? fmt(ratios.priceToSalesRatioTTM,1)+'x' : '—'}</td>
+              <td class="${changeClass}">${fmtPct(q.changesPercentage)}</td>
+            </tr>
+            ${peerRows}
+          </tbody>
+        </table>` : ''}
+      </div>
+    </div>
+
+    <!-- INVESTMENT THESIS -->
+    <div class="rapport-card">
+      <div class="rapport-section">
+        <div class="section-label">Investment Thesis</div>
+        ${thesisItems || '<div class="section-text">—</div>'}
+      </div>
+    </div>
+
+    <!-- RISICO'S -->
+    <div class="rapport-card">
+      <div class="rapport-section">
+        <div class="section-label">Risico's</div>
+        ${riskRows || '<div class="section-text">—</div>'}
+      </div>
+    </div>
+
+    <!-- ANALISTENCONSENSUS -->
+    ${consensus.targetConsensus || consensus.strongBuy != null ? `
+    <div class="rapport-card">
+      <div class="rapport-section">
+        <div class="section-label">Analistenconsensus</div>
+        <div class="consensus-row">
+          <div class="consensus-cell">
+            <div class="consensus-label">Gem. Doel</div>
+            <div class="consensus-value">$${fmt(consensus.targetConsensus)}</div>
+            <div class="consensus-sub">${targetPct ? (targetPct > 0 ? '+' : '') + targetPct + '% opwaarts' : ''}</div>
+          </div>
+          <div class="consensus-cell">
+            <div class="consensus-label">Rating</div>
+            <div class="consensus-value">${consensus.consensusRating || '—'}</div>
+            <div class="consensus-sub">${consensus.numberOfAnalysts ? consensus.numberOfAnalysts + ' analisten' : ''}</div>
+          </div>
+          <div class="consensus-cell">
+            <div class="consensus-label">Hoog doel</div>
+            <div class="consensus-value">$${fmt(consensus.targetHigh)}</div>
+            <div class="consensus-sub">Laag: $${fmt(consensus.targetLow)}</div>
+          </div>
+        </div>
+      </div>
+    </div>` : ''}
+
+    <!-- CONCLUSIE & SCORECARD -->
+    <div class="rapport-card">
+      <div class="rapport-section">
+        <div class="section-label">Conclusie</div>
+        <div class="section-text" style="margin-bottom:20px">${ai?.conclusion || '—'}</div>
+
+        <div class="scorecard-total">
+          <div class="scorecard-score">${total}<span>/40</span></div>
+          <div class="scorecard-label">Totaalscore — <strong>${ratingLabel}</strong></div>
+        </div>
+
+        <div class="scorecard-grid">
+          ${scoreRows}
+        </div>
+      </div>
+
+      <div class="disclaimer">
+        <strong>Disclaimer:</strong> Dit rapport is uitsluitend bedoeld voor educatieve doeleinden en vormt geen beleggingsadvies.
+        De analyses zijn automatisch gegenereerd op basis van publiek beschikbare data en AI-modellen. Verifieer altijd zelfstandig
+        vóór elke investeringsbeslissing. DeAnalist is geen gelicenseerde financieel adviseur.
+        Data: Financial Modeling Prep. Analyse: AI. Datum: ${today()}.
+      </div>
+    </div>
+  `;
+
+  showRapport();
+}
+
+// ── PDF Export ─────────────────────────────────────────────────────────────────
+async function exportPDF() {
+  if (!currentData) return;
+  const btn = document.getElementById('pdfBtn');
+  btn.disabled = true;
+  btn.textContent = 'Exporteren…';
+
+  const el = document.getElementById('rapportContent');
+  const ticker = currentData.ticker;
+  const date = new Date().toISOString().slice(0, 10);
+
+  const opt = {
+    margin:       [10, 10, 10, 10],
+    filename:     `DeAnalist_${ticker}_${date}.pdf`,
+    image:        { type: 'jpeg', quality: 0.92 },
+    html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#272a2d' },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  try {
+    await html2pdf().set(opt).from(el).save();
+  } catch (e) {
+    alert('PDF exporteren mislukt: ' + e.message);
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = `<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> PDF`;
+}
+</script>
+</body>
+</html>
