@@ -2,7 +2,7 @@
 // Haalt financiële data op van Financial Modeling Prep (FMP)
 // API-key nooit in frontend — enkel via process.env.FMP_API_KEY
 
-const FMP_BASE = 'https://financialmodelingprep.com/api/v3';
+const FMP_BASE = 'https://financialmodelingprep.com/stable';
 
 // Simpele in-memory rate limiting: max 10 rapporten per IP per dag
 const rateLimitMap = new Map();
@@ -52,23 +52,30 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Parallel ophalen
-    const [quoteArr, profileArr, incomeArr, balanceArr, ratiosData, estimatesArr, consensusArr] = await Promise.all([
-      fmp(`/quote/${t}`, key),
-      fmp(`/profile/${t}`, key),
-      fmp(`/income-statement/${t}?limit=3`, key),
-      fmp(`/balance-sheet-statement/${t}?limit=1`, key),
-      fmp(`/ratios-ttm/${t}`, key),
-      fmp(`/analyst-estimates/${t}?limit=2`, key),
-      fmp(`/price-target-consensus/${t}`, key),
+    // Parallel ophalen — nieuwe stable endpoints (query param ?symbol= i.p.v. path param)
+    const [quote, profile, incomeArr, balanceArr, ratiosTtm, keyMetricsTtm] = await Promise.all([
+      fmp(`/quote?symbol=${t}`, key),
+      fmp(`/profile?symbol=${t}`, key),
+      fmp(`/income-statement?symbol=${t}&limit=3`, key),
+      fmp(`/balance-sheet-statement?symbol=${t}&limit=1`, key),
+      fmp(`/ratios-ttm?symbol=${t}`, key),
+      fmp(`/key-metrics-ttm?symbol=${t}`, key),
     ]);
 
-    const quote   = Array.isArray(quoteArr)   ? quoteArr[0]   : quoteArr   || {};
-    const profile = Array.isArray(profileArr) ? profileArr[0] : profileArr || {};
-    const ratios  = Array.isArray(ratiosData) ? ratiosData[0] : ratiosData || {};
+    // Premium endpoints — fail silently als plan het niet toestaat
+    const [estimatesArr, consensusArr] = await Promise.all([
+      fmp(`/analyst-estimates?symbol=${t}&period=annual&limit=2`, key).catch(() => []),
+      fmp(`/price-target-consensus?symbol=${t}`, key).catch(() => null),
+    ]);
+
+    // Nieuwe stable API geeft object terug, geen array voor quote/profile
+    const quoteData   = Array.isArray(quote)   ? quote[0]   : quote   || {};
+    const profileData = Array.isArray(profile) ? profile[0] : profile || {};
+    const ratios      = Array.isArray(ratiosTtm)     ? ratiosTtm[0]     : ratiosTtm     || {};
+    const keyMetrics  = Array.isArray(keyMetricsTtm) ? keyMetricsTtm[0] : keyMetricsTtm || {};
 
     // Valideer: is ticker gevonden?
-    if (!quote || !quote.symbol) {
+    if (!quoteData || !quoteData.symbol) {
       return res.status(404).json({ error: `Ticker "${t}" niet gevonden. Controleer de ticker en probeer opnieuw.` });
     }
 
@@ -79,11 +86,12 @@ export default async function handler(req, res) {
     const consensus = Array.isArray(consensusArr) ? consensusArr[0] : consensusArr || {};
 
     res.status(200).json({
-      quote,
-      profile,
+      quote:   quoteData,
+      profile: profileData,
       income:  Array.isArray(incomeArr)  ? incomeArr  : [],
       balance: Array.isArray(balanceArr) ? balanceArr : [],
       ratios,
+      keyMetrics,
       estimates: {
         estimatedRevenue: nextEstimate.estimatedRevenueAvg || null,
         estimatedEps:     nextEstimate.estimatedEpsAvg     || null,
