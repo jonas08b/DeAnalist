@@ -3,28 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DeAnalist — Gratis Institutional Research Reports</title>
-    <!-- Tailwind CSS voor de UI -->
+    <title>DeAnalist — Institutional Equity Research</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- html2pdf.js voor client-side PDF-generatie -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
-        
-        /* Specifieke A4-styling voor het PDF-rapport */
-        .pdf-page { 
-            width: 800px; 
-            background: #ffffff; 
-            color: #1e293b; 
-            padding: 30px; 
-            margin: 0 auto; 
+
+        /* A4 rapport styling */
+        .pdf-page {
+            width: 820px;
+            background: #ffffff;
+            color: #1e293b;
+            padding: 36px 40px;
+            margin: 0 auto;
+            font-size: 11px;
+            line-height: 1.55;
         }
+
+        /* Zorg dat alles meegeprint wordt — geen hidden overflow */
+        .pdf-page * {
+            overflow: visible !important;
+            page-break-inside: avoid;
+        }
+
+        /* Aanbevelingsbadge */
+        .badge-KOOP    { background:#dcfce7; color:#166534; border:1px solid #86efac; }
+        .badge-HOUD    { background:#fef9c3; color:#854d0e; border:1px solid #fde047; }
+        .badge-VERKOOP { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 
-    <!-- Header / Navigatie -->
+    <!-- Header -->
     <header class="border-b border-slate-800 bg-slate-950/50 backdrop-blur sticky top-0 z-50">
         <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
             <div class="flex items-center space-x-3">
@@ -38,36 +49,27 @@
     </header>
 
     <main class="max-w-6xl mx-auto px-4 py-8">
-        
-        <!-- Opgeslagen Rapporten (Vercel Blob Drawer) -->
+
+        <!-- Opgeslagen Rapporten -->
         <section id="saved-modal" class="hidden mb-8 bg-slate-800 border border-slate-700 p-5 rounded-xl shadow-2xl">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
-                <h2 class="font-bold text-lg text-blue-400">Vercel Blob — Opgeslagen Rapporten</h2>
+                <h2 class="font-bold text-lg text-blue-400">Opgeslagen Rapporten</h2>
                 <button onclick="toggleSavedReports()" class="text-slate-400 hover:text-white text-sm">sluiten ✕</button>
             </div>
             <div id="saved-list" class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <p class="text-slate-400 text-xs col-span-3">Laden van Vercel Blob...</p>
+                <p class="text-slate-400 text-xs col-span-3">Laden...</p>
             </div>
         </section>
 
         <!-- Zoekbalk -->
         <section class="max-w-xl mx-auto text-center mb-10">
             <h1 class="text-3xl font-extrabold mb-3">Genereer een Equity Research Report</h1>
-            <p class="text-slate-400 text-sm mb-6">Voer een beursticker in om real-time marktdata en AI-analyse te bundelen in een PDF.</p>
-            
+            <p class="text-slate-400 text-sm mb-6">Voer een beursticker in voor real-time data + AI-analyse in institutioneel PDF-formaat.</p>
             <form id="search-form" class="flex gap-2 justify-center">
-                <input 
-                    type="text" 
-                    id="ticker-input" 
-                    placeholder="Bijv. AAPL, MSFT, ASML.AS..." 
-                    class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500 flex-1 uppercase font-semibold"
-                    required
-                >
-                <button 
-                    type="submit" 
-                    id="submit-btn" 
-                    class="bg-blue-600 hover:bg-blue-500 text-white font-medium px-6 py-3 rounded-lg transition duration-200"
-                >
+                <input type="text" id="ticker-input" placeholder="Bijv. AAPL, MSFT, UCB.BR..."
+                    class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500 flex-1 uppercase font-semibold" required>
+                <button type="submit" id="submit-btn"
+                    class="bg-blue-600 hover:bg-blue-500 text-white font-medium px-6 py-3 rounded-lg transition">
                     Analyseren
                 </button>
             </form>
@@ -78,122 +80,157 @@
         <div id="loader" class="hidden text-center py-12">
             <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent mb-4"></div>
             <p class="text-slate-300 font-medium">Marktdata ophalen & AI-analyse genereren...</p>
-            <p class="text-slate-500 text-xs mt-1">Dit duurt ca. 3-5 seconden.</p>
+            <p class="text-slate-500 text-xs mt-1">Ca. 5-8 seconden.</p>
         </div>
 
-        <!-- Rapport Actieknoppen & Preview -->
+        <!-- Actieknoppen + PDF rapport -->
         <section id="report-container" class="hidden">
-            <div class="flex justify-end gap-3 max-w-[800px] mx-auto mb-4">
-                <button 
-                    id="save-db-btn" 
-                    onclick="saveToDatabase()" 
-                    class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition flex items-center gap-1.5"
-                >
+            <div class="flex justify-end gap-3 max-w-[820px] mx-auto mb-4">
+                <button id="save-db-btn" onclick="saveToDatabase()"
+                    class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition">
                     💾 Opslaan op Vercel
                 </button>
-                <button 
-                    onclick="downloadPDF()" 
-                    class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition flex items-center gap-1.5"
-                >
+                <button onclick="downloadPDF()"
+                    class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition">
                     📄 Download PDF
                 </button>
             </div>
 
-            <!-- PDF Template (A4 weergave) -->
-            <div id="report-template" class="pdf-page shadow-2xl rounded-sm text-sm">
-                
-                <!-- Header van het rapport -->
-                <div class="border-b-2 border-slate-900 pb-3 mb-4 flex justify-between items-end">
+            <!-- ═══════════════════════════════════════════════════════════
+                 PDF TEMPLATE — alles hieronder komt in de PDF
+                 ═══════════════════════════════════════════════════════════ -->
+            <div id="report-template" class="pdf-page shadow-2xl rounded-sm">
+
+                <!-- ── RAPPORT HEADER ── -->
+                <div style="border-bottom:2px solid #0f172a; padding-bottom:10px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:flex-end;">
                     <div>
-                        <h2 class="text-xs font-bold text-slate-500 tracking-widest uppercase">DE ANALIST — EQUITY RESEARCH</h2>
-                        <h1 id="pdf-title" class="text-2xl font-extrabold text-slate-900 mt-1"></h1>
-                        <p id="pdf-subtitle" class="text-xs font-semibold text-blue-700 mt-0.5"></p>
+                        <div style="font-size:8px; font-weight:700; letter-spacing:2px; color:#64748b; text-transform:uppercase; margin-bottom:4px;">
+                            DE ANALIST — EQUITY RESEARCH · Research Department
+                        </div>
+                        <div id="pdf-title" style="font-size:22px; font-weight:800; color:#0f172a; margin-bottom:2px;"></div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span id="pdf-subtitle" style="font-size:11px; font-weight:600; color:#1d4ed8;"></span>
+                            <span id="pdf-badge" style="font-size:9px; font-weight:700; padding:2px 8px; border-radius:20px; letter-spacing:1px; text-transform:uppercase;"></span>
+                            <span id="pdf-horizon" style="font-size:9px; color:#64748b;"></span>
+                        </div>
                     </div>
-                    <div class="text-right text-[10px] text-slate-500">
-                        <p>Datum: <span id="pdf-date"></span></p>
-                        <p>Status: Institutional Research</p>
+                    <div style="text-align:right; font-size:9px; color:#64748b; line-height:1.6;">
+                        <div>Datum: <span id="pdf-date"></span></div>
+                        <div>Koersdoel: <span id="pdf-koersdoel-header" style="font-weight:700; color:#0f172a;"></span></div>
+                        <div>Upside: <span id="pdf-upside" style="font-weight:700;"></span></div>
                     </div>
                 </div>
 
-                <!-- KPI Strip -->
-                <div class="grid grid-cols-7 gap-1 bg-slate-100 p-2 rounded border border-slate-200 text-center mb-5">
-                    <div><span class="block text-[9px] text-slate-500 font-bold uppercase">Koers</span><span id="kpi-koers" class="font-bold text-slate-900 text-xs"></span></div>
-                    <div><span class="block text-[9px] text-slate-500 font-bold uppercase">Koersdoel</span><span id="kpi-doel" class="font-bold text-slate-900 text-xs"></span></div>
-                    <div><span class="block text-[9px] text-slate-500 font-bold uppercase">Market Cap</span><span id="kpi-mcap" class="font-bold text-slate-900 text-xs"></span></div>
-                    <div><span class="block text-[9px] text-slate-500 font-bold uppercase">K/W</span><span id="kpi-pe" class="font-bold text-slate-900 text-xs"></span></div>
-                    <div><span class="block text-[9px] text-slate-500 font-bold uppercase">Omzet</span><span id="kpi-omzet" class="font-bold text-slate-900 text-xs"></span></div>
-                    <div><span class="block text-[9px] text-slate-500 font-bold uppercase">Marge</span><span id="kpi-marge" class="font-bold text-slate-900 text-xs"></span></div>
-                    <div><span class="block text-[9px] text-slate-500 font-bold uppercase">Dividend</span><span id="kpi-div" class="font-bold text-slate-900 text-xs"></span></div>
+                <!-- ── KPI STRIP ── -->
+                <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:4px; background:#f1f5f9; padding:8px; border-radius:4px; border:1px solid #e2e8f0; text-align:center; margin-bottom:14px;">
+                    <div><div style="font-size:7px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Koers</div><div id="kpi-koers" style="font-weight:700;font-size:11px;color:#0f172a;"></div></div>
+                    <div><div style="font-size:7px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Koersdoel</div><div id="kpi-doel" style="font-weight:700;font-size:11px;color:#0f172a;"></div></div>
+                    <div><div style="font-size:7px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Market Cap</div><div id="kpi-mcap" style="font-weight:700;font-size:11px;color:#0f172a;"></div></div>
+                    <div><div style="font-size:7px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px;">K/W (P/E)</div><div id="kpi-pe" style="font-weight:700;font-size:11px;color:#0f172a;"></div></div>
+                    <div><div style="font-size:7px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Omzet</div><div id="kpi-omzet" style="font-weight:700;font-size:11px;color:#0f172a;"></div></div>
+                    <div><div style="font-size:7px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Nettomarge</div><div id="kpi-marge" style="font-weight:700;font-size:11px;color:#0f172a;"></div></div>
+                    <div><div style="font-size:7px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Dividend</div><div id="kpi-div" style="font-weight:700;font-size:11px;color:#0f172a;"></div></div>
                 </div>
 
-                <!-- Investment Thesis & Businessmodel -->
-                <div class="space-y-4 mb-4">
-                    <div>
-                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-1 mb-1">Investment Thesis</h3>
-                        <p id="pdf-thesis" class="text-justify leading-relaxed text-slate-700 text-[11px]"></p>
-                    </div>
-                    <div>
-                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-1 mb-1">Businessmodel & Sectorcontext</h3>
-                        <p id="pdf-business" class="text-justify leading-relaxed text-slate-700 text-[11px]"></p>
-                    </div>
+                <!-- ── KOERSDOEL METHODOLOGIE ── -->
+                <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:4px; padding:8px 10px; margin-bottom:14px;">
+                    <span style="font-size:8px;font-weight:700;text-transform:uppercase;color:#1e40af;letter-spacing:1px;">Koersdoel Methodologie · </span>
+                    <span id="pdf-koersdoel-methode" style="font-size:10px; color:#1e3a8a;"></span>
                 </div>
 
-                <!-- SWOT & Katalysatoren / Risico's -->
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div class="bg-slate-50 p-3 rounded border border-slate-200">
-                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-1 mb-2">SWOT-Analyse</h3>
-                        <div class="space-y-1.5 text-[10px]">
-                            <p><strong>Sterktes:</strong> <span id="swot-sterktes"></span></p>
-                            <p><strong>Zwaktes:</strong> <span id="swot-zwaktes"></span></p>
-                            <p><strong>Kansen:</strong> <span id="swot-kansen"></span></p>
-                            <p><strong>Bedreigingen:</strong> <span id="swot-bedreigingen"></span></p>
+                <!-- ── INVESTMENT THESIS & BUSINESSMODEL ── -->
+                <div style="margin-bottom:14px;">
+                    <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:6px;">Investment Thesis</div>
+                    <p id="pdf-thesis" style="text-align:justify; color:#334155; line-height:1.6;"></p>
+                </div>
+                <div style="margin-bottom:14px;">
+                    <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:6px;">Businessmodel & Sectorcontext</div>
+                    <p id="pdf-business" style="text-align:justify; color:#334155; line-height:1.6;"></p>
+                </div>
+
+                <!-- ── SWOT + KATALYSATOREN (2 kolommen) ── -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+
+                    <!-- SWOT -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; padding:10px;">
+                        <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:8px;">SWOT-Analyse</div>
+                        <div style="margin-bottom:5px;">
+                            <div style="font-size:9px;font-weight:700;color:#166534;margin-bottom:2px;">▲ Sterktes</div>
+                            <div id="swot-sterktes" style="font-size:9px;color:#334155;line-height:1.5;"></div>
+                        </div>
+                        <div style="margin-bottom:5px;">
+                            <div style="font-size:9px;font-weight:700;color:#9a3412;margin-bottom:2px;">▼ Zwaktes</div>
+                            <div id="swot-zwaktes" style="font-size:9px;color:#334155;line-height:1.5;"></div>
+                        </div>
+                        <div style="margin-bottom:5px;">
+                            <div style="font-size:9px;font-weight:700;color:#1e40af;margin-bottom:2px;">◆ Kansen</div>
+                            <div id="swot-kansen" style="font-size:9px;color:#334155;line-height:1.5;"></div>
+                        </div>
+                        <div>
+                            <div style="font-size:9px;font-weight:700;color:#7e22ce;margin-bottom:2px;">● Bedreigingen</div>
+                            <div id="swot-bedreigingen" style="font-size:9px;color:#334155;line-height:1.5;"></div>
                         </div>
                     </div>
 
-                    <div class="bg-slate-50 p-3 rounded border border-slate-200">
-                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-1 mb-2">Katalysatoren & Risico's</h3>
-                        <div class="space-y-1.5 text-[10px]">
-                            <p><strong class="text-emerald-700">Upside Katalysatoren:</strong> <span id="kat-upside"></span></p>
-                            <p><strong class="text-rose-700">Downside Risico's:</strong> <span id="kat-downside"></span></p>
+                    <!-- Katalysatoren & Risico's -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; padding:10px;">
+                        <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:8px;">Katalysatoren & Risico's</div>
+                        <div style="margin-bottom:8px;">
+                            <div style="font-size:9px;font-weight:700;color:#166534;margin-bottom:3px;">▲ Upside Katalysatoren</div>
+                            <div id="kat-upside" style="font-size:9px;color:#334155;line-height:1.5;"></div>
+                        </div>
+                        <div>
+                            <div style="font-size:9px;font-weight:700;color:#9a3412;margin-bottom:3px;">▼ Downside Risico's</div>
+                            <div id="kat-downside" style="font-size:9px;color:#334155;line-height:1.5;"></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Concurrentenanalyse -->
-                <div class="mb-4">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-1 mb-2">Concurrentenanalyse (Peers)</h3>
-                    <table class="w-full text-left text-[10px] border-collapse border border-slate-200">
+                <!-- ── CONCURRENTENANALYSE MET CIJFERS ── -->
+                <div style="margin-bottom:14px;">
+                    <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:6px;">Concurrentenanalyse — Peer Comparison</div>
+                    <table style="width:100%; border-collapse:collapse; font-size:9px;">
                         <thead>
-                            <tr class="bg-slate-900 text-white uppercase text-[9px]">
-                                <th class="p-1.5 border border-slate-300">Bedrijf</th>
-                                <th class="p-1.5 border border-slate-300">Ticker</th>
-                                <th class="p-1.5 border border-slate-300">Strategische Focus</th>
+                            <tr style="background:#0f172a; color:#fff; font-size:8px; text-transform:uppercase; letter-spacing:0.5px;">
+                                <th style="padding:5px 6px; border:1px solid #334155; text-align:left;">Bedrijf</th>
+                                <th style="padding:5px 6px; border:1px solid #334155; text-align:left;">Ticker</th>
+                                <th style="padding:5px 6px; border:1px solid #334155; text-align:center;">P/E</th>
+                                <th style="padding:5px 6px; border:1px solid #334155; text-align:center;">Nettomarge</th>
+                                <th style="padding:5px 6px; border:1px solid #334155; text-align:left;">Strategisch Verschil vs. Subject</th>
                             </tr>
                         </thead>
                         <tbody id="peers-table"></tbody>
                     </table>
                 </div>
 
-                <!-- Waardering -->
-                <div class="mb-4">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-1 mb-1">Waarderingsniveau</h3>
-                    <p id="pdf-waardering" class="text-justify leading-relaxed text-slate-700 text-[11px]"></p>
+                <!-- ── WAARDERING ── -->
+                <div style="margin-bottom:14px;">
+                    <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:6px;">Waarderingsniveau & Conclusie</div>
+                    <p id="pdf-waardering" style="text-align:justify; color:#334155; line-height:1.6;"></p>
                 </div>
 
-                <!-- Disclaimer -->
-                <div class="text-[8px] text-slate-400 border-t border-slate-200 pt-2 text-justify">
-                    <strong>Disclaimer:</strong> Dit rapport is automatisch gegenereerd via "DeAnalist". Gegevens zijn gebaseerd op publieke bronnen en AI-generatie. Dit vormt op geen enkele wijze financieel advies.
+                <!-- ── BRONVERMELDING ── -->
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; padding:8px 10px; margin-bottom:10px;">
+                    <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:4px;">Gebruikte Databronnen</div>
+                    <div id="pdf-bronnen" style="font-size:9px; color:#64748b; line-height:1.6;"></div>
+                </div>
+
+                <!-- ── DISCLAIMER ── -->
+                <div style="font-size:8px; color:#94a3b8; border-top:1px solid #e2e8f0; padding-top:8px; text-align:justify; line-height:1.5;">
+                    <strong>Research Department — De Analist</strong> | Dit rapport is automatisch gegenereerd via DeAnalist.
+                    Databronnen: Yahoo Finance (koersdata, marktkapitalisatie, omzet, marges, dividendrendement),
+                    Financial Modeling Prep (consensus koersdoelen, peer-data), Google Gemini (AI-tekstgeneratie).
+                    Dit rapport vormt op geen enkele wijze financieel advies. Beleggen brengt risico's met zich mee.
+                    Raadpleeg een erkend beleggingsadviseur voor persoonlijke aanbevelingen.
                 </div>
             </div>
         </section>
     </main>
 
-    <!-- Client-Side App Logica -->
     <script>
         let currentFinData = null;
         let currentAiData = null;
 
-        // Formulier afhandeling
         document.getElementById('search-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const ticker = document.getElementById('ticker-input').value.trim();
@@ -208,12 +245,10 @@
             errorMsg.classList.add('hidden');
 
             try {
-                // 1. Marktdata ophalen via Yahoo Finance
                 const finRes = await fetch(`/api/financials?ticker=${encodeURIComponent(ticker)}`);
                 const finData = await finRes.json();
                 if (!finRes.ok) throw new Error(finData.error || 'Fout bij ophalen marktdata.');
 
-                // 2. AI Analyse genereren via Gemini API
                 const aiRes = await fetch('/api/ai', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -225,9 +260,7 @@
                 currentFinData = finData;
                 currentAiData = aiData;
 
-                // 3. Rapport in HTML vullen
                 renderReport(finData, aiData);
-
                 loader.classList.add('hidden');
                 reportContainer.classList.remove('hidden');
 
@@ -238,63 +271,110 @@
             }
         });
 
-        // HTML vullen met de opgevraagde data
         function renderReport(fin, ai) {
+            // Header
             document.getElementById('pdf-title').textContent = `${fin.bedrijfsNaam} (${fin.ticker})`;
             document.getElementById('pdf-subtitle').textContent = ai.subtitel || '';
             document.getElementById('pdf-date').textContent = new Date().toLocaleDateString('nl-NL');
 
-            // KPI's
-            document.getElementById('kpi-koers').textContent = typeof fin.koers === 'number' ? `$${fin.koers}` : fin.koers;
-            document.getElementById('kpi-doel').textContent = typeof fin.koersdoel === 'number' ? `$${fin.koersdoel}` : fin.koersdoel;
-            document.getElementById('kpi-mcap').textContent = formatBigNumber(fin.marketCap);
-            document.getElementById('kpi-pe').textContent = typeof fin.pe === 'number' ? `${fin.pe.toFixed(1)}x` : fin.pe;
+            // Aanbevelingsbadge
+            const badge = document.getElementById('pdf-badge');
+            const rec = ai.aanbeveling || '';
+            badge.textContent = rec;
+            badge.className = `badge-${rec}`;
+            badge.style.cssText += 'font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:1px;text-transform:uppercase;';
+
+            document.getElementById('pdf-horizon').textContent = ai.tijdshorizon ? `· ${ai.tijdshorizon}` : '';
+
+            // Koersdoel + upside berekening
+            const koers = typeof fin.koers === 'number' ? fin.koers : null;
+            const doel  = typeof fin.koersdoel === 'number' ? fin.koersdoel : null;
+            document.getElementById('pdf-koersdoel-header').textContent = doel ? `$${doel.toFixed(2)}` : 'N/B';
+            if (koers && doel) {
+                const upside = (((doel - koers) / koers) * 100).toFixed(1);
+                const upsideEl = document.getElementById('pdf-upside');
+                upsideEl.textContent = `${upside > 0 ? '+' : ''}${upside}%`;
+                upsideEl.style.color = upside > 0 ? '#166534' : '#991b1b';
+            } else {
+                document.getElementById('pdf-upside').textContent = 'N/B';
+            }
+
+            // Koersdoel methodologie
+            document.getElementById('pdf-koersdoel-methode').textContent = ai.koersdoelMethode || 'Niet beschikbaar';
+
+            // KPI strip
+            document.getElementById('kpi-koers').textContent = koers ? `$${koers.toLocaleString('nl-NL', {minimumFractionDigits:2,maximumFractionDigits:2})}` : fin.koers;
+            document.getElementById('kpi-doel').textContent  = doel  ? `$${doel.toFixed(2)}` : fin.koersdoel;
+            document.getElementById('kpi-mcap').textContent  = formatBigNumber(fin.marketCap);
+            document.getElementById('kpi-pe').textContent    = typeof fin.pe === 'number' ? `${fin.pe.toFixed(1)}x` : fin.pe;
             document.getElementById('kpi-omzet').textContent = formatBigNumber(fin.omzet);
             document.getElementById('kpi-marge').textContent = typeof fin.marge === 'number' ? `${(fin.marge * 100).toFixed(1)}%` : fin.marge;
-            document.getElementById('kpi-div').textContent = typeof fin.dividend === 'number' ? `${(fin.dividend * 100).toFixed(2)}%` : fin.dividend;
+            document.getElementById('kpi-div').textContent   = typeof fin.dividend === 'number' ? `${(fin.dividend * 100).toFixed(2)}%` : fin.dividend;
 
             // Teksten
-            document.getElementById('pdf-thesis').textContent = ai.investmentThesis;
-            document.getElementById('pdf-business').textContent = ai.businessmodel;
-            document.getElementById('pdf-waardering').textContent = ai.waardering;
+            document.getElementById('pdf-thesis').textContent    = ai.investmentThesis || '';
+            document.getElementById('pdf-business').textContent  = ai.businessmodel    || '';
+            document.getElementById('pdf-waardering').textContent = ai.waardering       || '';
 
-            // SWOT
-            document.getElementById('swot-sterktes').textContent = ai.swot.sterktes.join('; ');
-            document.getElementById('swot-zwaktes').textContent = ai.swot.zwaktes.join('; ');
-            document.getElementById('swot-kansen').textContent = ai.swot.kansen.join('; ');
-            document.getElementById('swot-bedreigingen').textContent = ai.swot.bedreigingen.join('; ');
+            // SWOT — bullets als genummerde lijstitems
+            const renderList = (items) => Array.isArray(items)
+                ? items.map((x, i) => `${i+1}. ${x}`).join('\n')
+                : (items || '');
+            document.getElementById('swot-sterktes').style.whiteSpace = 'pre-line';
+            document.getElementById('swot-zwaktes').style.whiteSpace = 'pre-line';
+            document.getElementById('swot-kansen').style.whiteSpace = 'pre-line';
+            document.getElementById('swot-bedreigingen').style.whiteSpace = 'pre-line';
+            document.getElementById('swot-sterktes').textContent    = renderList(ai.swot?.sterktes);
+            document.getElementById('swot-zwaktes').textContent     = renderList(ai.swot?.zwaktes);
+            document.getElementById('swot-kansen').textContent      = renderList(ai.swot?.kansen);
+            document.getElementById('swot-bedreigingen').textContent = renderList(ai.swot?.bedreigingen);
 
             // Katalysatoren
-            document.getElementById('kat-upside').textContent = ai.katalysatorenRisicos.katalysatoren.join('; ');
-            document.getElementById('kat-downside').textContent = ai.katalysatorenRisicos.risicos.join('; ');
+            document.getElementById('kat-upside').style.whiteSpace = 'pre-line';
+            document.getElementById('kat-downside').style.whiteSpace = 'pre-line';
+            document.getElementById('kat-upside').textContent   = renderList(ai.katalysatorenRisicos?.katalysatoren);
+            document.getElementById('kat-downside').textContent = renderList(ai.katalysatorenRisicos?.risicos);
 
-            // Concurrenten (Peers)
+            // Peers tabel met P/E en marge
             const peersTbody = document.getElementById('peers-table');
-            peersTbody.innerHTML = ai.peers.map(p => `
-                <tr class="border-b border-slate-200">
-                    <td class="p-1.5 font-bold">${p.naam}</td>
-                    <td class="p-1.5">${p.ticker}</td>
-                    <td class="p-1.5 text-slate-600">${p.focus}</td>
+            const peers = ai.peers || [];
+            peersTbody.innerHTML = peers.map((p, i) => `
+                <tr style="background:${i % 2 === 0 ? '#f8fafc' : '#ffffff'}; border-bottom:1px solid #e2e8f0;">
+                    <td style="padding:5px 6px; border:1px solid #e2e8f0; font-weight:700; color:#0f172a;">${p.naam || ''}</td>
+                    <td style="padding:5px 6px; border:1px solid #e2e8f0; font-family:monospace; color:#1d4ed8;">${p.ticker || ''}</td>
+                    <td style="padding:5px 6px; border:1px solid #e2e8f0; text-align:center; color:#0f172a;">${p.pe || 'N/A'}</td>
+                    <td style="padding:5px 6px; border:1px solid #e2e8f0; text-align:center; color:#0f172a;">${p.marge || 'N/A'}</td>
+                    <td style="padding:5px 6px; border:1px solid #e2e8f0; color:#475569;">${p.focus || ''}</td>
                 </tr>
             `).join('');
+
+            // Bronnen
+            const bronnenEl = document.getElementById('pdf-bronnen');
+            const bronnen = ai.bronnen || ['Yahoo Finance (koersdata)', 'Financial Modeling Prep (koersdoelen)', 'Google Gemini (AI-analyse)'];
+            bronnenEl.style.whiteSpace = 'pre-line';
+            bronnenEl.textContent = bronnen.map((b, i) => `[${i+1}] ${b}`).join('\n');
         }
 
-        // Opslaan op Vercel Blob
+        function formatBigNumber(val) {
+            if (typeof val !== 'number') return val;
+            if (val >= 1e12) return `$${(val / 1e12).toFixed(2)}T`;
+            if (val >= 1e9)  return `$${(val / 1e9).toFixed(2)}B`;
+            if (val >= 1e6)  return `$${(val / 1e6).toFixed(2)}M`;
+            return `$${val}`;
+        }
+
         async function saveToDatabase() {
             if (!currentFinData || !currentAiData) return;
             const btn = document.getElementById('save-db-btn');
             btn.textContent = 'Opslaan...';
-
             try {
                 const res = await fetch('/api/reports', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ kpiData: currentFinData, aiData: currentAiData })
                 });
-
                 if (!res.ok) throw new Error('Opslaan mislukt.');
-
-                btn.textContent = '✅ Opgeslagen op Vercel!';
+                btn.textContent = '✅ Opgeslagen!';
                 setTimeout(() => { btn.textContent = '💾 Opslaan op Vercel'; }, 3000);
             } catch (err) {
                 alert('Fout bij opslaan: ' + err.message);
@@ -302,42 +382,37 @@
             }
         }
 
-        // Opgeslagen rapporten ophalen uit Vercel Blob
         async function toggleSavedReports() {
             const modal = document.getElementById('saved-modal');
             modal.classList.toggle('hidden');
-
             if (!modal.classList.contains('hidden')) {
                 const list = document.getElementById('saved-list');
-                list.innerHTML = '<p class="text-slate-400 text-xs col-span-3">Laden van Vercel Blob...</p>';
-
+                list.innerHTML = '<p class="text-slate-400 text-xs col-span-3">Laden...</p>';
                 try {
                     const res = await fetch('/api/reports');
                     const data = await res.json();
-
                     if (!res.ok || !data || data.length === 0) {
-                        list.innerHTML = '<p class="text-slate-400 text-xs col-span-3">Nog geen opgeslagen rapporten gevonden.</p>';
+                        list.innerHTML = '<p class="text-slate-400 text-xs col-span-3">Geen opgeslagen rapporten.</p>';
                         return;
                     }
-
                     list.innerHTML = data.map(item => `
                         <div class="bg-slate-900 border border-slate-700 p-3 rounded-lg flex justify-between items-center">
                             <div>
                                 <span class="font-bold text-white text-sm">${item.bedrijfsNaam} (${item.ticker})</span>
                                 <span class="block text-[10px] text-slate-400">${new Date(item.createdAt).toLocaleDateString('nl-NL')}</span>
                             </div>
-                            <button onclick='loadSavedReport(${JSON.stringify(item.kpiData)}, ${JSON.stringify(item.aiData)})' class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-2.5 py-1 rounded">
+                            <button onclick='loadSavedReport(${JSON.stringify(item.kpiData)}, ${JSON.stringify(item.aiData)})'
+                                class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-2.5 py-1 rounded">
                                 Openen
                             </button>
                         </div>
                     `).join('');
-                } catch (err) {
-                    list.innerHTML = '<p class="text-red-400 text-xs col-span-3">Kon rapporten niet laden van Vercel Blob.</p>';
+                } catch {
+                    list.innerHTML = '<p class="text-red-400 text-xs col-span-3">Kon rapporten niet laden.</p>';
                 }
             }
         }
 
-        // Een opgeslagen rapport openen
         function loadSavedReport(fin, ai) {
             currentFinData = fin;
             currentAiData = ai;
@@ -346,28 +421,17 @@
             document.getElementById('saved-modal').classList.add('hidden');
         }
 
-        // Formatteer grote getallen (bijv. 3000000000 -> $3.00B)
-        function formatBigNumber(val) {
-            if (typeof val !== 'number') return val;
-            if (val >= 1e12) return `$${(val / 1e12).toFixed(2)}T`;
-            if (val >= 1e9) return `$${(val / 1e9).toFixed(2)}B`;
-            if (val >= 1e6) return `$${(val / 1e6).toFixed(2)}M`;
-            return `$${val}`;
-        }
-
-        // Exporteer live naar PDF via html2pdf.js
         function downloadPDF() {
             const element = document.getElementById('report-template');
             const ticker = currentFinData ? currentFinData.ticker : 'REPORT';
-            
             const opt = {
-                margin:       0.3,
-                filename:     `DeAnalist_Research_${ticker}.pdf`,
+                margin:       [0.3, 0.2, 0.3, 0.2],
+                filename:     `DeAnalist_${ticker}_${new Date().toISOString().slice(0,10)}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2 },
-                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+                html2canvas:  { scale: 2, useCORS: true, logging: false },
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
+                pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
             };
-
             html2pdf().set(opt).from(element).save();
         }
     </script>
