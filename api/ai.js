@@ -1,7 +1,6 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 export default async function handler(req, res) {
-    // 1. CORS Headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -11,74 +10,68 @@ export default async function handler(req, res) {
     }
 
     if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Alleen POST-requests zijn toegestaan.' });
+        return res.status(405).json({ error: 'Methode niet toegestaan.' });
     }
 
     const { kpiData } = req.body;
 
-    if (!kpiData || !kpiData.ticker) {
-        return res.status(400).json({ error: 'Geen financiële data ontvangen om te analyseren.' });
+    if (!kpiData) {
+        return res.status(400).json({ error: 'Geen financiële data ontvangen voor de AI.' });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+        return res.status(500).json({ error: 'GEMINI_API_KEY ontbreekt in de omgevingsvariabelen van Vercel.' });
     }
 
     try {
-        // 2. Initialiseer Gemini met je gratis API key
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const genAI = new GoogleGenerativeAI(apiKey);
+        
+        // Gebruik het actuele Flash model
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-        // 3. De professionele Investment Bank prompt
         const prompt = `
-Je bent een senior equity research analist bij een top-tier investeringsbank. 
-Schrijf op basis van de onderstaande marktgegevens een hoogprofessioneel, zakelijk beleggingsrapport in het Nederlands.
+Je bent een ervaren Equity Research Analyst op Wall Street.
+Schrijf een beknopt, professioneel analyse-rapport in het NEDERLANDS voor het volgende bedrijf op basis van deze marktdata:
+${JSON.stringify(kpiData, null, 2)}
 
-Financiële KPI's:
-- Ticker: ${kpiData.ticker}
-- Bedrijf: ${kpiData.bedrijfsNaam}
-- Koers: $${kpiData.koers}
-- Koersdoel: $${kpiData.koersdoel}
-- Market Cap: ${kpiData.marketCap}
-- K/W (P/E): ${kpiData.pe}
-- Omzet: ${kpiData.omzet}
-- Nettomarge: ${kpiData.marge}
-- Dividend: ${kpiData.dividend}
+Geef je antwoord UITSLAUITEND als een geldig JSON-object met exact de volgende structuur (geen markdown formatting of extra tekst eromheen, alleen de JSON):
 
-Geef de output UITSLUITEND terug als een geldige, pure JSON string (zonder markdown opmaak zoals \`\`\`json) met exact deze structuur:
 {
-  "subtitel": "Korte, krachtige visie/ondertitel op het aandeel (max 15 woorden)",
-  "investmentThesis": "De kern van de beleggingscasus (150-200 woorden)",
-  "businessmodel": "Uitleg over het verdienmodel en de sectorcontext (150 woorden)",
+  "subtitel": "Korte krachtige ondertitel/slogan",
+  "investmentThesis": "Een sterke alinea over waarom een belegger dit wel of niet zou kopen.",
+  "businessmodel": "Beknopte uitleg van het verdienmodel en marktpositie.",
   "swot": {
-    "sterktes": ["Sterkte 1 met toelichting", "Sterkte 2 met toelichting"],
-    "zwaktes": ["Zwakte 1 met toelichting", "Zwakte 2 met toelichting"],
-    "kansen": ["Kans 1 met toelichting", "Kans 2 met toelichting"],
-    "bedreigingen": ["Bedreiging 1 met toelichting", "Bedreiging 2 met toelichting"]
+    "sterktes": ["Sterkte 1", "Sterkte 2"],
+    "zwaktes": ["Zwakte 1", "Zwakte 2"],
+    "kansen": ["Kans 1", "Kans 2"],
+    "bedreigingen": ["Bedreiging 1", "Bedreiging 2"]
   },
   "katalysatorenRisicos": {
-    "katalysatoren": ["Katalysator 1 (Upside)", "Katalysator 2 (Upside)"],
-    "risicos": ["Risico 1 (Downside)", "Risico 2 (Downside)"]
+    "katalysatoren": ["Katalysator 1", "Katalysator 2"],
+    "risicos": ["Risico 1", "Risico 2"]
   },
   "peers": [
-    {"naam": "Concurrent 1", "ticker": "TICKER1", "focus": "Relatie/focus tov dit bedrijf"},
-    {"naam": "Concurrent 2", "ticker": "TICKER2", "focus": "Relatie/focus tov dit bedrijf"},
-    {"naam": "Concurrent 3", "ticker": "TICKER3", "focus": "Relatie/focus tov dit bedrijf"}
+    {"naam": "Concurrent 1", "ticker": "TICKER1", "focus": "Beschrijving focus"},
+    {"naam": "Concurrent 2", "ticker": "TICKER2", "focus": "Beschrijving focus"}
   ],
-  "waardering": "Analyse over het huidige waarderingsniveau en of het duur/goedkoop lijkt (100 woorden)"
+  "waardering": "Korte conclusie over de huidige koers/waardering (bijv. K/W verhouding)."
 }
 `;
 
-        // 4. Genereer de AI-analyse
         const result = await model.generateContent(prompt);
         const responseText = result.response.text();
 
-        // Opschonen voor het geval het model toch markdown backticks toevoegt
-        const cleanedJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-        const parsedAnalysis = JSON.parse(cleanedJson);
+        // Schoon eventuele markdown (```json ... ```) op die de AI kan meegeven
+        const cleanJsonString = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsedAiData = JSON.parse(cleanJsonString);
 
-        res.status(200).json(parsedAnalysis);
+        return res.status(200).json(parsedAiData);
 
     } catch (error) {
-        console.error('Fout bij genereren van AI-analyse:', error);
-        res.status(500).json({ 
-            error: 'Kon geen AI-analyse genereren. Controleer je GEMINI_API_KEY instelling op Vercel.' 
+        console.error('Gemini API Fout:', error);
+        return res.status(500).json({ 
+            error: `Kon geen AI-analyse genereren (${error.message}).` 
         });
     }
 }
