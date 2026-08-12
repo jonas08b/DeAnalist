@@ -1,7 +1,16 @@
-const { YahooFinance } = require('yahoo-finance2');
+const yahooModule = require('yahoo-finance2');
 
-// Initialize the YahooFinance class instance as required by v3
-const yahooFinance = new YahooFinance();
+// Zorg voor een universele import die altijd werkt (CommonJS / ES Module)
+const YahooFinanceClass = yahooModule.YahooFinance || yahooModule.default || yahooModule;
+
+// Initialiseer de v3 instantie
+let yahooFinance;
+try {
+    yahooFinance = new YahooFinanceClass();
+} catch (e) {
+    // Als de module al een instantie is (fallback)
+    yahooFinance = yahooModule;
+}
 
 export default async function handler(req, res) {
     // 1. CORS Headers
@@ -24,12 +33,12 @@ export default async function handler(req, res) {
     try {
         const cleanTicker = ticker.trim().toUpperCase();
 
-        // 2. Suppress unnecessary v3 notices
+        // 2. Onderdruk optionele v3 meldingen
         if (typeof yahooFinance.suppressNotices === 'function') {
             yahooFinance.suppressNotices(['yahooSurvey']);
         }
 
-        // 3. Fetch quote summary using the initialized instance
+        // 3. Haal marktdata op
         const result = await yahooFinance.quoteSummary(cleanTicker, {
             modules: ['summaryDetail', 'financialData', 'price']
         });
@@ -42,7 +51,7 @@ export default async function handler(req, res) {
         const financialData = result.financialData || {};
         const summaryDetail = result.summaryDetail || {};
 
-        // 4. Clean KPI Object
+        // 4. Bouw KPI Object
         const kpiData = {
             ticker: cleanTicker,
             bedrijfsNaam: priceData.longName || priceData.shortName || cleanTicker,
