@@ -1,4 +1,7 @@
-const yahooFinance = require('yahoo-finance2').default;
+const { YahooFinance } = require('yahoo-finance2');
+
+// Initialize the YahooFinance class instance as required by v3
+const yahooFinance = new YahooFinance();
 
 export default async function handler(req, res) {
     // 1. CORS Headers
@@ -21,12 +24,12 @@ export default async function handler(req, res) {
     try {
         const cleanTicker = ticker.trim().toUpperCase();
 
-        // 2. Suppress v3 notices om verwarring in logs te voorkomen
+        // 2. Suppress unnecessary v3 notices
         if (typeof yahooFinance.suppressNotices === 'function') {
             yahooFinance.suppressNotices(['yahooSurvey']);
         }
 
-        // 3. Haal data op via quoteSummary
+        // 3. Fetch quote summary using the initialized instance
         const result = await yahooFinance.quoteSummary(cleanTicker, {
             modules: ['summaryDetail', 'financialData', 'price']
         });
@@ -39,7 +42,7 @@ export default async function handler(req, res) {
         const financialData = result.financialData || {};
         const summaryDetail = result.summaryDetail || {};
 
-        // 4. Strakke KPI structuur
+        // 4. Clean KPI Object
         const kpiData = {
             ticker: cleanTicker,
             bedrijfsNaam: priceData.longName || priceData.shortName || cleanTicker,
@@ -57,7 +60,6 @@ export default async function handler(req, res) {
     } catch (error) {
         console.error('API Financials Error:', error);
         
-        // Zorg dat we ALTIJD een JSON-foutmelding terugsturen
         return res.status(500).json({ 
             error: `Kon data niet ophalen: ${error.message || 'Onbekende fout'}` 
         });
