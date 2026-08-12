@@ -1,9 +1,24 @@
 {
   "name": "deanalist",
   "version": "1.0.0",
-  "description": "AI-gedreven equity research tool — onderdeel van DeBrief",
-  "private": true,
+  "description": "Gratis automatisch Equity Research Report generator",
+  "main": "index.html",
   "scripts": {
-    "dev": "vercel dev"
+    "dev": "vercel dev",
+    "build": "echo 'Static build completely ready'"
+  },
+  "keywords": [
+    "equity-research",
+    "finance",
+    "ai",
+    "gemini",
+    "stocks",
+    "deanalist"
+  ],
+  "author": "DeAnalist",
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "yahoo-finance2": "^2.13.0"
   }
 }
