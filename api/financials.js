@@ -1,117 +1,48 @@
-// /api/financials.js — Vercel Serverless Function
-// Haalt financiële data op van Financial Modeling Prep (FMP)
-// API-key nooit in frontend — enkel via process.env.FMP_API_KEY
-
-const FMP_BASE = 'https://financialmodelingprep.com/stable';
-
-// Simpele in-memory rate limiting: max 10 rapporten per IP per dag
-const rateLimitMap = new Map();
-
-function checkRateLimit(ip) {
-  const now = Date.now();
-  const DAY  = 24 * 60 * 60 * 1000;
-  const MAX  = 10;
-
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now - entry.start > DAY) {
-    rateLimitMap.set(ip, { count: 1, start: now });
-    return true;
-  }
-  if (entry.count >= MAX) return false;
-  entry.count++;
-  return true;
-}
-
-async function fmp(path, key) {
-  const sep = path.includes('?') ? '&' : '?';
-  const url = `${FMP_BASE}${path}${sep}apikey=${key}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`FMP ${path} → HTTP ${res.status}`);
-  return res.json();
-}
+const yahooFinance = require('yahoo-finance2').default;
 
 export default async function handler(req, res) {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  if (req.method === 'OPTIONS') return res.status(200).end();
+    // 1. CORS headers toevoegen zodat je frontend (index.html) erbij kan
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
 
-  const key = process.env.FMP_API_KEY;
-  if (!key) return res.status(500).json({ error: 'FMP_API_KEY niet geconfigureerd' });
+    // 2. Haal de ticker uit de URL parameter (bijv. /api/financials?ticker=AAPL)
+    const { ticker } = req.query;
 
-  const { ticker } = req.query;
-  if (!ticker || !/^[A-Z0-9.]{1,10}$/i.test(ticker)) {
-    return res.status(400).json({ error: 'Ongeldige ticker' });
-  }
-  const t = ticker.toUpperCase();
-
-  // Rate limiting
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
-  if (!checkRateLimit(ip)) {
-    return res.status(429).json({ error: 'Dagelijkse limiet bereikt (max 10 rapporten per dag). Probeer morgen opnieuw.' });
-  }
-
-  try {
-    // Parallel ophalen — nieuwe stable endpoints (query param ?symbol= i.p.v. path param)
-    const [quote, profile, incomeArr, balanceArr, ratiosTtm, keyMetricsTtm] = await Promise.all([
-      fmp(`/quote?symbol=${t}`, key),
-      fmp(`/profile?symbol=${t}`, key),
-      fmp(`/income-statement?symbol=${t}&limit=3`, key),
-      fmp(`/balance-sheet-statement?symbol=${t}&limit=1`, key),
-      fmp(`/ratios-ttm?symbol=${t}`, key),
-      fmp(`/key-metrics-ttm?symbol=${t}`, key),
-    ]);
-
-    // Premium endpoints — fail silently als plan het niet toestaat
-    const [estimatesArr, consensusArr] = await Promise.all([
-      fmp(`/analyst-estimates?symbol=${t}&period=annual&limit=2`, key).catch(() => []),
-      fmp(`/price-target-consensus?symbol=${t}`, key).catch(() => null),
-    ]);
-
-    // Nieuwe stable API geeft object terug, geen array voor quote/profile
-    const quoteData   = Array.isArray(quote)   ? quote[0]   : quote   || {};
-    const profileData = Array.isArray(profile) ? profile[0] : profile || {};
-    const ratios      = Array.isArray(ratiosTtm)     ? ratiosTtm[0]     : ratiosTtm     || {};
-    const keyMetrics  = Array.isArray(keyMetricsTtm) ? keyMetricsTtm[0] : keyMetricsTtm || {};
-
-    // Valideer: is ticker gevonden?
-    if (!quoteData || !quoteData.symbol) {
-      return res.status(404).json({ error: `Ticker "${t}" niet gevonden. Controleer de ticker en probeer opnieuw.` });
+    if (!ticker) {
+        return res.status(400).json({ 
+            error: 'Geen ticker opgegeven. Gebruik bijvoorbeeld: /api/financials?ticker=AAPL' 
+        });
     }
 
-    // Forward estimates: eerste toekomstige FY
-    const nextEstimate = (Array.isArray(estimatesArr) ? estimatesArr : [])
-      .find(e => e.estimatedRevenueLow || e.estimatedEpsLow) || {};
+    try {
+        // 3. Haal alleen de modules op die we nodig hebben voor onze KPI-strip
+        const queryOptions = { modules: ['summaryDetail', 'financialData', 'price'] };
+        const result = await yahooFinance.quoteSummary(ticker, queryOptions);
 
-    const consensus = Array.isArray(consensusArr) ? consensusArr[0] : consensusArr || {};
+        const priceData = result.price || {};
+        const financialData = result.financialData || {};
+        const summaryDetail = result.summaryDetail || {};
 
-    res.status(200).json({
-      quote:   quoteData,
-      profile: profileData,
-      income:  Array.isArray(incomeArr)  ? incomeArr  : [],
-      balance: Array.isArray(balanceArr) ? balanceArr : [],
-      ratios,
-      keyMetrics,
-      estimates: {
-        estimatedRevenue: nextEstimate.estimatedRevenueAvg || null,
-        estimatedEps:     nextEstimate.estimatedEpsAvg     || null,
-      },
-      consensus: {
-        targetConsensus:  consensus.targetConsensus  || null,
-        targetHigh:       consensus.targetHigh       || null,
-        targetLow:        consensus.targetLow        || null,
-        consensusRating:  consensus.rating           || null,
-        numberOfAnalysts: consensus.numberOfAnalysts || null,
-      },
-    });
+        // 4. Bouw een strak JSON-object op met exact de KPI's die het rapport nodig heeft
+        const kpiData = {
+            ticker: ticker.toUpperCase(),
+            bedrijfsNaam: priceData.longName || ticker.toUpperCase(),
+            koers: priceData.regularMarketPrice || 'N/A',
+            koersdoel: financialData.targetMeanPrice || 'N/A',
+            marketCap: priceData.marketCap || 'N/A',
+            pe: summaryDetail.trailingPE || 'N/A',
+            omzet: financialData.totalRevenue || 'N/A',
+            marge: financialData.profitMargins || 'N/A',
+            dividend: summaryDetail.dividendYield || 'N/A'
+        };
 
-  } catch (err) {
-    console.error('[financials]', err);
+        // 5. Stuur de data succesvol terug naar de app
+        res.status(200).json(kpiData);
 
-    if (err.message?.includes('429') || err.message?.includes('quota')) {
-      return res.status(429).json({ error: 'FMP-daglimiet bereikt (250 req/dag). Probeer later opnieuw.' });
+    } catch (error) {
+        console.error(`Fout bij ophalen Yahoo Finance data voor ${ticker}:`, error.message);
+        res.status(500).json({ 
+            error: 'Kon financiële data niet ophalen. Controleer of de ticker-code klopt.' 
+        });
     }
-
-    res.status(500).json({ error: err.message || 'Onbekende fout bij ophalen data' });
-  }
 }
