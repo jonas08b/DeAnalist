@@ -4,21 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DeAnalist — Gratis Institutional Research Reports</title>
-    <!-- Tailwind CSS voor strakke UI -->
+    <!-- Tailwind CSS voor de UI -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- html2pdf.js voor 100% gratis client-side PDF generatie -->
+    <!-- html2pdf.js voor client-side PDF-generatie -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
         
-        /* Specifieke styling voor de PDF exporter */
-        .pdf-page {
-            width: 800px;
-            background: #ffffff;
-            color: #1e293b;
-            padding: 30px;
-            margin: 0 auto;
+        /* Specifieke A4-styling voor het PDF-rapport */
+        .pdf-page { 
+            width: 800px; 
+            background: #ffffff; 
+            color: #1e293b; 
+            padding: 30px; 
+            margin: 0 auto; 
         }
     </style>
 </head>
@@ -31,11 +31,25 @@
                 <span class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">DE ANALIST</span>
                 <span class="text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full font-medium">100% Gratis</span>
             </div>
+            <button onclick="toggleSavedReports()" class="text-sm font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 transition">
+                📁 Opgeslagen Rapporten
+            </button>
         </div>
     </header>
 
     <main class="max-w-6xl mx-auto px-4 py-8">
         
+        <!-- Opgeslagen Rapporten (Vercel Blob Drawer) -->
+        <section id="saved-modal" class="hidden mb-8 bg-slate-800 border border-slate-700 p-5 rounded-xl shadow-2xl">
+            <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
+                <h2 class="font-bold text-lg text-blue-400">Vercel Blob — Opgeslagen Rapporten</h2>
+                <button onclick="toggleSavedReports()" class="text-slate-400 hover:text-white text-sm">sluiten ✕</button>
+            </div>
+            <div id="saved-list" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <p class="text-slate-400 text-xs col-span-3">Laden van Vercel Blob...</p>
+            </div>
+        </section>
+
         <!-- Zoekbalk -->
         <section class="max-w-xl mx-auto text-center mb-10">
             <h1 class="text-3xl font-extrabold mb-3">Genereer een Equity Research Report</h1>
@@ -51,8 +65,8 @@
                 >
                 <button 
                     type="submit" 
-                    id="submit-btn"
-                    class="bg-blue-600 hover:bg-blue-500 text-white font-medium px-6 py-3 rounded-lg transition duration-200 flex items-center justify-center min-w-[120px]"
+                    id="submit-btn" 
+                    class="bg-blue-600 hover:bg-blue-500 text-white font-medium px-6 py-3 rounded-lg transition duration-200"
                 >
                     Analyseren
                 </button>
@@ -67,20 +81,27 @@
             <p class="text-slate-500 text-xs mt-1">Dit duurt ca. 3-5 seconden.</p>
         </div>
 
-        <!-- PDF Rapport Actieknoppen & Preview -->
+        <!-- Rapport Actieknoppen & Preview -->
         <section id="report-container" class="hidden">
             <div class="flex justify-end gap-3 max-w-[800px] mx-auto mb-4">
                 <button 
-                    id="download-btn" 
-                    onclick="downloadPDF()" 
-                    class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 rounded-lg text-sm flex items-center gap-2 shadow-lg transition"
+                    id="save-db-btn" 
+                    onclick="saveToDatabase()" 
+                    class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition flex items-center gap-1.5"
                 >
-                    <span>Download PDF</span>
+                    💾 Opslaan op Vercel
+                </button>
+                <button 
+                    onclick="downloadPDF()" 
+                    class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition flex items-center gap-1.5"
+                >
+                    📄 Download PDF
                 </button>
             </div>
 
-            <!-- PDF Template (Hier wordt de data ingeladen) -->
+            <!-- PDF Template (A4 weergave) -->
             <div id="report-template" class="pdf-page shadow-2xl rounded-sm text-sm">
+                
                 <!-- Header van het rapport -->
                 <div class="border-b-2 border-slate-900 pb-3 mb-4 flex justify-between items-end">
                     <div>
@@ -117,7 +138,7 @@
                     </div>
                 </div>
 
-                <!-- SWOT & Katalysatoren / Risico's in 2 kolommen -->
+                <!-- SWOT & Katalysatoren / Risico's -->
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div class="bg-slate-50 p-3 rounded border border-slate-200">
                         <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-1 mb-2">SWOT-Analyse</h3>
@@ -161,13 +182,18 @@
 
                 <!-- Disclaimer -->
                 <div class="text-[8px] text-slate-400 border-t border-slate-200 pt-2 text-justify">
-                    <strong>Disclaimer:</strong> Dit rapport is automatisch gegenereerd via "DeAnalist". Gegevens zijn gebaseerd op publieke marktsources en AI-generatie. Dit vormt op geen enkele wijze financieel advies.
+                    <strong>Disclaimer:</strong> Dit rapport is automatisch gegenereerd via "DeAnalist". Gegevens zijn gebaseerd op publieke bronnen en AI-generatie. Dit vormt op geen enkele wijze financieel advies.
                 </div>
             </div>
         </section>
     </main>
 
+    <!-- Client-Side App Logica -->
     <script>
+        let currentFinData = null;
+        let currentAiData = null;
+
+        // Formulier afhandeling
         document.getElementById('search-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const ticker = document.getElementById('ticker-input').value.trim();
@@ -182,12 +208,12 @@
             errorMsg.classList.add('hidden');
 
             try {
-                // 1. Haal marktdata op
+                // 1. Marktdata ophalen via Yahoo Finance
                 const finRes = await fetch(`/api/financials?ticker=${encodeURIComponent(ticker)}`);
                 const finData = await finRes.json();
                 if (!finRes.ok) throw new Error(finData.error || 'Fout bij ophalen marktdata.');
 
-                // 2. Haal AI-analyse op
+                // 2. AI Analyse genereren via Gemini API
                 const aiRes = await fetch('/api/ai', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -196,7 +222,10 @@
                 const aiData = await aiRes.json();
                 if (!aiRes.ok) throw new Error(aiData.error || 'Fout bij genereren AI-analyse.');
 
-                // 3. Vul de PDF template in
+                currentFinData = finData;
+                currentAiData = aiData;
+
+                // 3. Rapport in HTML vullen
                 renderReport(finData, aiData);
 
                 loader.classList.add('hidden');
@@ -209,6 +238,7 @@
             }
         });
 
+        // HTML vullen met de opgevraagde data
         function renderReport(fin, ai) {
             document.getElementById('pdf-title').textContent = `${fin.bedrijfsNaam} (${fin.ticker})`;
             document.getElementById('pdf-subtitle').textContent = ai.subtitel || '';
@@ -238,7 +268,7 @@
             document.getElementById('kat-upside').textContent = ai.katalysatorenRisicos.katalysatoren.join('; ');
             document.getElementById('kat-downside').textContent = ai.katalysatorenRisicos.risicos.join('; ');
 
-            // Peers
+            // Concurrenten (Peers)
             const peersTbody = document.getElementById('peers-table');
             peersTbody.innerHTML = ai.peers.map(p => `
                 <tr class="border-b border-slate-200">
@@ -249,6 +279,74 @@
             `).join('');
         }
 
+        // Opslaan op Vercel Blob
+        async function saveToDatabase() {
+            if (!currentFinData || !currentAiData) return;
+            const btn = document.getElementById('save-db-btn');
+            btn.textContent = 'Opslaan...';
+
+            try {
+                const res = await fetch('/api/reports', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ kpiData: currentFinData, aiData: currentAiData })
+                });
+
+                if (!res.ok) throw new Error('Opslaan mislukt.');
+
+                btn.textContent = '✅ Opgeslagen op Vercel!';
+                setTimeout(() => { btn.textContent = '💾 Opslaan op Vercel'; }, 3000);
+            } catch (err) {
+                alert('Fout bij opslaan: ' + err.message);
+                btn.textContent = '💾 Opslaan op Vercel';
+            }
+        }
+
+        // Opgeslagen rapporten ophalen uit Vercel Blob
+        async function toggleSavedReports() {
+            const modal = document.getElementById('saved-modal');
+            modal.classList.toggle('hidden');
+
+            if (!modal.classList.contains('hidden')) {
+                const list = document.getElementById('saved-list');
+                list.innerHTML = '<p class="text-slate-400 text-xs col-span-3">Laden van Vercel Blob...</p>';
+
+                try {
+                    const res = await fetch('/api/reports');
+                    const data = await res.json();
+
+                    if (!res.ok || !data || data.length === 0) {
+                        list.innerHTML = '<p class="text-slate-400 text-xs col-span-3">Nog geen opgeslagen rapporten gevonden.</p>';
+                        return;
+                    }
+
+                    list.innerHTML = data.map(item => `
+                        <div class="bg-slate-900 border border-slate-700 p-3 rounded-lg flex justify-between items-center">
+                            <div>
+                                <span class="font-bold text-white text-sm">${item.bedrijfsNaam} (${item.ticker})</span>
+                                <span class="block text-[10px] text-slate-400">${new Date(item.createdAt).toLocaleDateString('nl-NL')}</span>
+                            </div>
+                            <button onclick='loadSavedReport(${JSON.stringify(item.kpiData)}, ${JSON.stringify(item.aiData)})' class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-2.5 py-1 rounded">
+                                Openen
+                            </button>
+                        </div>
+                    `).join('');
+                } catch (err) {
+                    list.innerHTML = '<p class="text-red-400 text-xs col-span-3">Kon rapporten niet laden van Vercel Blob.</p>';
+                }
+            }
+        }
+
+        // Een opgeslagen rapport openen
+        function loadSavedReport(fin, ai) {
+            currentFinData = fin;
+            currentAiData = ai;
+            renderReport(fin, ai);
+            document.getElementById('report-container').classList.remove('hidden');
+            document.getElementById('saved-modal').classList.add('hidden');
+        }
+
+        // Formatteer grote getallen (bijv. 3000000000 -> $3.00B)
         function formatBigNumber(val) {
             if (typeof val !== 'number') return val;
             if (val >= 1e12) return `$${(val / 1e12).toFixed(2)}T`;
@@ -257,9 +355,10 @@
             return `$${val}`;
         }
 
+        // Exporteer live naar PDF via html2pdf.js
         function downloadPDF() {
             const element = document.getElementById('report-template');
-            const ticker = document.getElementById('ticker-input').value.toUpperCase() || 'REPORT';
+            const ticker = currentFinData ? currentFinData.ticker : 'REPORT';
             
             const opt = {
                 margin:       0.3,
