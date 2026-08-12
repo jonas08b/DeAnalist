@@ -3,18 +3,9 @@
   "version": "1.0.0",
   "description": "Gratis automatisch Equity Research Report generator",
   "main": "index.html",
-  "keywords": [
-    "equity-research",
-    "finance",
-    "ai",
-    "gemini",
-    "stocks",
-    "deanalist"
-  ],
-  "author": "DeAnalist",
-  "license": "MIT",
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
+    "@vercel/blob": "^0.27.0",
     "yahoo-finance2": "^3.0.0"
   }
 }
