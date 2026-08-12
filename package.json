@@ -3,10 +3,6 @@
   "version": "1.0.0",
   "description": "Gratis automatisch Equity Research Report generator",
   "main": "index.html",
-  "scripts": {
-    "dev": "vercel dev",
-    "build": "echo 'Static build completely ready'"
-  },
   "keywords": [
     "equity-research",
     "finance",
@@ -19,6 +15,6 @@
   "license": "MIT",
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
-    "yahoo-finance2": "^2.13.0"
+    "yahoo-finance2": "^3.0.0"
   }
 }
