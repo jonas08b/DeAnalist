@@ -27,8 +27,8 @@ export default async function handler(req, res) {
     try {
         const genAI = new GoogleGenerativeAI(apiKey);
         
-        // Gebruik het actuele Flash model
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        // Gebruik gemini-2.0-flash
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
         const prompt = `
 Je bent een ervaren Equity Research Analyst op Wall Street.
@@ -62,7 +62,7 @@ Geef je antwoord UITSLAUITEND als een geldig JSON-object met exact de volgende s
         const result = await model.generateContent(prompt);
         const responseText = result.response.text();
 
-        // Schoon eventuele markdown (```json ... ```) op die de AI kan meegeven
+        // Strip eventuele markdown tags (zoals ```json ... ```)
         const cleanJsonString = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
         const parsedAiData = JSON.parse(cleanJsonString);
 
