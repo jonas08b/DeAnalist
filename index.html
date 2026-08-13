@@ -647,72 +647,72 @@ function downloadPDF() {
 }
 /* ── OPSLAAN ALS PDF ──────────────────────────────────────────────────── */
 async function saveToDatabase() {
-    if (!currentFinData || !currentAiData) return;
-    const btn    = document.getElementById('save-db-btn');
-    const ticker = currentFinData.ticker || 'REPORT';
-    const date   = new Date().toISOString().slice(0, 10);
-    const filename = `DeAnalist_${ticker}_${date}.pdf`;
+    const el = document.getElementById('report-template');
+    
+    // Fallbacks toevoegen als ticker of title ontbreken
+    const ticker = currentFinData?.ticker || 'REPORT';
+    const title = currentFinData?.profile?.name || currentFinData?.ticker || 'Financieel Rapport';
 
-    btn.textContent = '⏳ PDF genereren...';
-    btn.disabled = true;
+    // Toon statusaanwijzing aan de gebruiker
+    const saveBtn = document.getElementById('save-db-btn'); // of de id van je knop
+    if (saveBtn) saveBtn.innerText = "⏳ Bezig met opslaan...";
 
     try {
-        const el = document.getElementById('report-template');
-        const origShadow = el.style.boxShadow;
-        el.style.boxShadow = 'none';
-
         const opt = {
             margin:      0,
-            filename,
-            image:       { type: 'jpeg', quality: 0.97 },
-            html2canvas: { scale: 2, useCORS: true, logging: false, width: 794, windowWidth: 794 },
+            filename:    `DeAnalist_${ticker}_${new Date().toISOString().slice(0,10)}.pdf`,
+            image:       { type: 'jpeg', quality: 0.98 },
+            html2canvas: { 
+                scale: 2, 
+                useCORS: true, 
+                logging: false, 
+                width: 794, 
+                windowWidth: 794,
+                scrollX: 0,
+                scrollY: 0,
+                x: 0,
+                y: 0
+            },
             jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
             pagebreak:   { mode: ['avoid-all', 'css', 'legacy'] }
         };
 
-        // Genereer PDF als base64-string (geen download)
-        const pdfBase64 = await html2pdf()
-            .set(opt)
-            .from(el)
-            .toPdf()
-            .get('pdf')
-            .then(pdf => {
-                el.style.boxShadow = origShadow;
-                return pdf.output('datauristring').split(',')[1];
-            });
-
-        btn.textContent = '⏳ Uploaden...';
-
-        const res = await fetch('/api/reports', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pdfBase64, filename, ticker, bedrijfsNaam: currentFinData.bedrijfsNaam })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Opslaan mislukt.');
-
-        btn.textContent = '✅ Opgeslagen!';
-        btn.disabled = false;
-
-        // Toon de publieke URL
-        if (data.url) {
-            const link = document.createElement('a');
-            link.href = data.url;
-            link.target = '_blank';
-            link.textContent = '🔗 Bekijk PDF';
-            link.className = 'text-blue-400 text-xs ml-2 underline';
-            btn.parentNode.appendChild(link);
-            setTimeout(() => link.remove(), 10000);
+        // Genereer de PDF als base64 string
+        const pdfWorker = html2pdf().set(opt).from(el);
+        const pdf = await pdfWorker.outputPdf('datauristring');
+        
+        if (!pdf) {
+            throw new Error("PDF kon niet worden gegenereerd.");
         }
 
-        setTimeout(() => { btn.textContent = '💾 Opslaan op Vercel'; }, 4000);
+        const base64Data = pdf.split(',')[1];
+
+        // Verstuur de data naar de Vercel API endpoint
+        const response = await fetch('/api/reports', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ticker: ticker,
+                title: title,
+                pdfBase64: base64Data
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Fout bij opslaan op Vercel');
+        }
+
+        alert('✅ Rapport succesvol opgeslagen op Vercel Blob!');
     } catch (err) {
-        alert('Fout bij opslaan: ' + err.message);
-        btn.textContent = '💾 Opslaan op Vercel';
-        btn.disabled = false;
+        console.error(err);
+        alert(`❌ Fout bij opslaan: ${err.message}`);
+    } finally {
+        if (saveBtn) saveBtn.innerText = "💾 Opslaan op Vercel";
     }
 }
-
+    
 async function toggleSavedReports() {
     const modal = document.getElementById('saved-modal');
     modal.classList.toggle('hidden');
