@@ -4,7 +4,6 @@ export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
     if (req.method === 'OPTIONS') return res.status(200).end();
     if (req.method !== 'POST') return res.status(405).json({ error: 'Methode niet toegestaan.' });
 
@@ -16,94 +15,200 @@ export default async function handler(req, res) {
 
     try {
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
         const prompt = `
-Je bent een senior Equity Research Analyst. Analyseer het volgende bedrijf op basis van de aangeleverde marktdata.
-Schrijf UITSLUITEND in het NEDERLANDS. Wees concreet, specifiek en kwantitatief waar mogelijk.
+Je bent een senior Equity Research Analyst (CFA-niveau). Analyseer het volgende bedrijf op basis van de aangeleverde marktdata.
+Schrijf UITSLUITEND in het NEDERLANDS. Gebruik neutrale, institutionele taal — geen promotionele formuleringen.
+
+REGELS VOOR TAALGEBRUIK:
+- Vervang "superieur operationeel profiel" → "bovengemiddelde operationele efficiëntie"  
+- Vervang "uitmuntende marge" → "nettomarge van X%, significant boven sectorgemiddelde van Y%"
+- Vervang "onmisbare rol" → "structureel dominante marktpositie"
+- Elk kwalitatief oordeel MOET gevolgd worden door een concreet getal
 
 MARKTDATA:
 ${JSON.stringify(kpiData, null, 2)}
 
-KRITIEKE INSTRUCTIES:
-1. SWOT: Elk punt MOET bedrijfsspecifiek zijn — verwijs naar concrete cijfers, producten, markten of events. Geen generieke sectorclichés.
-2. KOERSDOEL: Als er een consensus koersdoel is, leg exact uit hoe dat tot stand komt (welke methode: DCF, EV/EBITDA, P/E-multiple vs sectorgemiddelde). Als er geen koersdoel beschikbaar is, schrijf "Niet beschikbaar".
-3. AANBEVELING: Geef een expliciete koop/houd/verkoop aanbeveling met tijdshorizon (6-12m) en onderbouwing.
-4. PEERS: Selecteer 3-4 directe concurrenten van vergelijkbare schaal en sector. Geef per peer hun bekende P/E, marge en één strategisch verschilpunt t.o.v. het geanalyseerde bedrijf.
-5. BRONNEN: Vermeld welke databronnen gebruikt zijn voor de cijfers (Yahoo Finance, FMP, consensus data).
-6. WAARDERING: Vergelijk de huidige K/W (P/E) expliciet met het sectorgemiddelde en historisch gemiddelde van het bedrijf indien beschikbaar.
-
-Geef je antwoord UITSLUITEND als een geldig JSON-object met exact deze structuur (geen markdown, geen extra tekst):
+Geef je antwoord UITSLUITEND als een geldig JSON-object met exact deze structuur. Geen markdown, geen extra tekst:
 
 {
-  "subtitel": "Krachtige ondertitel met aanbeveling en tijdshorizon (max 12 woorden)",
-  "aanbeveling": "KOOP" | "HOUD" | "VERKOOP",
-  "tijdshorizon": "6-12 maanden",
-  "koersdoelMethode": "Korte toelichting hoe consensus koersdoel is berekend (DCF, EV/EBITDA-multiple, P/E-peer-avg, of 'Niet beschikbaar')",
-  "investmentThesis": "Twee à drie alinea's met een actionabel koopargument of verkoopargument. Verwijs naar specifieke cijfers uit de data. Sluit af met de concrete aanbeveling en tijdshorizon.",
-  "businessmodel": "Beknopte uitleg van het verdienmodel, geografische spreiding en marktpositie (2-3 zinnen, bedrijfsspecifiek).",
+  "subtitel": "Neutrale ondertitel met aanbeveling en tijdshorizon (max 12 woorden)",
+  "aanbeveling": "KOOP of HOUD of VERKOOP",
+  "tijdshorizon": "12 maanden",
+  "koersdoelMethode": "Toelichting hoe consensus koersdoel tot stand komt: DCF, EV/EBITDA-multiple, P/E-peer-avg. Of 'Niet beschikbaar'.",
+
+  "financieelOverzicht": {
+    "jaren": ["FY2024A", "FY2025A", "FY2026E", "FY2027E"],
+    "omzet":      ["€Xmrd", "€Xmrd", "€Xmrd", "€Xmrd"],
+    "brutomarge": ["X%", "X%", "X%", "X%"],
+    "ebit":       ["€Xmrd", "€Xmrd", "€Xmrd", "€Xmrd"],
+    "nettomarge": ["X%", "X%", "X%", "X%"],
+    "eps":        ["€X", "€X", "€X", "€X"],
+    "dps":        ["€X", "€X", "€X", "€X"],
+    "fcf":        ["€Xmrd", "€Xmrd", "€Xmrd", "€Xmrd"],
+    "bron": "Consensus Bloomberg/FactSet of eigen model op basis van Yahoo Finance"
+  },
+
+  "dcf": {
+    "wacc": {
+      "risicovrij": "X% (10j staatsobligatie)",
+      "beta": "X.XX",
+      "marktpremie": "X% (ERP)",
+      "schuldenPremie": "X%",
+      "totaalWacc": "X%"
+    },
+    "prognoses": [
+      {"jaar": "FY2026E", "omzet": "€Xmrd", "ebitMarge": "X%", "fcf": "€Xmrd", "eps": "€X"},
+      {"jaar": "FY2027E", "omzet": "€Xmrd", "ebitMarge": "X%", "fcf": "€Xmrd", "eps": "€X"},
+      {"jaar": "FY2028E", "omzet": "€Xmrd", "ebitMarge": "X%", "fcf": "€Xmrd", "eps": "€X"},
+      {"jaar": "FY2029E", "omzet": "€Xmrd", "ebitMarge": "X%", "fcf": "€Xmrd", "eps": "€X"},
+      {"jaar": "FY2030E", "omzet": "€Xmrd", "ebitMarge": "X%", "fcf": "€Xmrd", "eps": "€X"}
+    ],
+    "terminaleWaarde": "Terminale groeivoet X%, terminale FCF €Xmrd, TV = FCF × (1+g)/(WACC-g) = €Xmrd. Contante waarde TV = €Xmrd (X% van totale ondernemingswaarde).",
+    "gevoeligheid": {
+      "wacc":  ["7%", "8%", "9%", "10%"],
+      "groei": ["2%", "3%", "4%"],
+      "matrix": [
+        ["€X", "€X", "€X", "€X"],
+        ["€X", "€X", "€X", "€X"],
+        ["€X", "€X", "€X", "€X"]
+      ]
+    }
+  },
+
+  "scenarios": [
+    {
+      "naam": "Bull",
+      "kans": "25%",
+      "kleur": "groen",
+      "aanname": "Concrete positieve aanname specifiek voor dit bedrijf (product, markt, event)",
+      "koersdoel": "€X of $X"
+    },
+    {
+      "naam": "Base",
+      "kans": "55%",
+      "kleur": "blauw",
+      "aanname": "Consensus prognoses — huidige groeiverwachtingen realiseren zich",
+      "koersdoel": "€X of $X"
+    },
+    {
+      "naam": "Bear",
+      "kans": "20%",
+      "kleur": "rood",
+      "aanname": "Concrete negatieve aanname specifiek voor dit bedrijf (regulatoir, concurrentie, vraaguitval)",
+      "koersdoel": "€X of $X"
+    }
+  ],
+
+  "risicosKwantitatief": [
+    {
+      "naam": "Risico 1 (bedrijfsspecifiek)",
+      "omzetimpact": "€X–Xmrd of -X%",
+      "kans": "Hoog of Middel of Laag",
+      "horizon": "12 mnd of 18 mnd of 24 mnd",
+      "mitigatie": "Concrete mitigerende factor"
+    },
+    {
+      "naam": "Risico 2",
+      "omzetimpact": "-X% marge",
+      "kans": "Middel",
+      "horizon": "18 mnd",
+      "mitigatie": "Mitigerende factor"
+    },
+    {
+      "naam": "Risico 3",
+      "omzetimpact": "€X–Xmrd",
+      "kans": "Laag",
+      "horizon": "24 mnd",
+      "mitigatie": "Mitigerende factor"
+    }
+  ],
+
+  "peers": {
+    "directe": [
+      {
+        "naam": "Directe Concurrent 1 (zelfde sector, vergelijkbare schaal)",
+        "ticker": "TICKER1",
+        "forwardPE": "X.Xx",
+        "evEbitda": "X.Xx",
+        "pegRatio": "X.XX",
+        "fcfYield": "X.X%",
+        "nettomarge": "X.X%",
+        "relevantie": "Uitleg waarom dit WEL de juiste benchmark is"
+      },
+      {
+        "naam": "Directe Concurrent 2",
+        "ticker": "TICKER2",
+        "forwardPE": "X.Xx",
+        "evEbitda": "X.Xx",
+        "pegRatio": "X.XX",
+        "fcfYield": "X.X%",
+        "nettomarge": "X.X%",
+        "relevantie": "Uitleg"
+      },
+      {
+        "naam": "Directe Concurrent 3",
+        "ticker": "TICKER3",
+        "forwardPE": "X.Xx",
+        "evEbitda": "X.Xx",
+        "pegRatio": "X.XX",
+        "fcfYield": "X.X%",
+        "nettomarge": "X.X%",
+        "relevantie": "Uitleg"
+      }
+    ],
+    "monopoliepremie": [
+      {
+        "naam": "Monopolie-benchmark 1 (bijv. NVIDIA, MSFT, Hermès)",
+        "ticker": "TICKER",
+        "pe": "X.Xx",
+        "moat": "Type structurele moat (netwerk, IP, schaarste)",
+        "vergelijking": "Waarom dit bedrijf WEL of NIET vergelijkbaar is qua premie"
+      },
+      {
+        "naam": "Monopolie-benchmark 2",
+        "ticker": "TICKER",
+        "pe": "X.Xx",
+        "moat": "Type moat",
+        "vergelijking": "Vergelijking"
+      }
+    ]
+  },
+
+  "investmentThesis": "Twee à drie alinea's. Institutionele toon. Elk kwalitatief oordeel gevolgd door een getal. Sluit af met expliciete aanbeveling en tijdshorizon.",
+  "businessmodel": "Twee zinnen. Verdienmodel, geografische spreiding, marktaandeel. Bedrijfsspecifiek.",
+
   "swot": {
     "sterktes": [
-      "Specifieke sterkte 1 met cijfer of productnaam",
-      "Specifieke sterkte 2 met cijfer of marktpositie",
+      "Specifieke sterkte met cijfer of productnaam",
+      "Specifieke sterkte 2",
       "Specifieke sterkte 3"
     ],
     "zwaktes": [
-      "Specifieke zwakte 1 met context",
+      "Specifieke zwakte met kwantificering",
       "Specifieke zwakte 2",
       "Specifieke zwakte 3"
     ],
     "kansen": [
-      "Concrete kans 1 met marktgrootte of trend",
+      "Concrete kans met marktgrootte of groeipercentage",
       "Concrete kans 2",
       "Concrete kans 3"
     ],
     "bedreigingen": [
-      "Specifieke bedreiging 1 met concurrentnaam of regelgeving",
+      "Specifieke bedreiging met concurrentnaam of percentage",
       "Specifieke bedreiging 2",
       "Specifieke bedreiging 3"
     ]
   },
-  "katalysatorenRisicos": {
-    "katalysatoren": [
-      "Upside katalysator 1 (bijv. productlancering, FDA-goedkeuring, marktexpansie)",
-      "Upside katalysator 2",
-      "Upside katalysator 3"
-    ],
-    "risicos": [
-      "Downside risico 1 (bijv. regulatoir, rente, concurrentie)",
-      "Downside risico 2",
-      "Downside risico 3"
-    ]
-  },
-  "peers": [
-    {
-      "naam": "Naam Concurrent 1",
-      "ticker": "TICKER1",
-      "pe": "bijv. 18.5x of N/A",
-      "marge": "bijv. 12.3% of N/A",
-      "focus": "Één concrete strategische eigenschap die dit bedrijf onderscheidt van het geanalyseerde bedrijf"
-    },
-    {
-      "naam": "Naam Concurrent 2",
-      "ticker": "TICKER2",
-      "pe": "bijv. 22.0x of N/A",
-      "marge": "bijv. 9.1% of N/A",
-      "focus": "Strategisch verschil"
-    },
-    {
-      "naam": "Naam Concurrent 3",
-      "ticker": "TICKER3",
-      "pe": "bijv. 15.3x of N/A",
-      "marge": "bijv. 15.7% of N/A",
-      "focus": "Strategisch verschil"
-    }
-  ],
-  "waardering": "Vergelijk de huidige P/E of EV/EBITDA expliciet met: (1) het sectorgemiddelde, (2) het 5-jarig historisch gemiddelde van het bedrijf indien bekend, (3) het consensus koersdoel impliceert X% upside/downside t.o.v. huidige koers. Sluit af met een conclusie.",
+
+  "waardering": "Vergelijk P/E of EV/EBITDA met (1) sectorgemiddelde, (2) historisch gemiddelde 5j indien bekend, (3) upside/downside t.o.v. huidige koers op basis van koersdoel. Conclusie in één zin.",
+
   "bronnen": [
-    "Koers, market cap, omzet, marges: Yahoo Finance (real-time)",
-    "Consensus koersdoel: Financial Modeling Prep (analistengemiddelde)",
-    "AI-tekstgeneratie: Google Gemini"
+    "Koers, market cap, omzet, marges, dividendrendement: Yahoo Finance (real-time)",
+    "Consensus koersdoel, peers data: Financial Modeling Prep (analistengemiddelde)",
+    "Prognoses FY2026-2030: eigen model op basis van historische groei + sectortrends",
+    "AI-tekstgeneratie en modelberekeningen: Google Gemini 2.0 Flash"
   ]
 }
 `;
@@ -112,7 +217,6 @@ Geef je antwoord UITSLUITEND als een geldig JSON-object met exact deze structuur
         const responseText = result.response.text();
         const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
         const parsed = JSON.parse(cleanJson);
-
         return res.status(200).json(parsed);
 
     } catch (error) {
