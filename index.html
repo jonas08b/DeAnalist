@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DeAnalist — DeBrief Analyses</title>
+    <title>DeAnalist — Institutional Equity Research</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -438,8 +438,15 @@ function renderReport(fin, ai) {
     ['sterktes','zwaktes','kansen','bedreigingen'].forEach(k => {
         document.getElementById(`swot-${k}`).textContent = ls(ai.swot?.[k]);
     });
-    document.getElementById('kat-upside').textContent  = ls(ai.katalysatorenRisicos?.katalysatoren);
-    document.getElementById('kat-downside').textContent = ls(ai.katalysatorenRisicos?.risicos);
+    // Katalysatoren: gebruik katalysatorenRisicos; fallback op scenarios/risicosKwantitatief
+    const katalysatoren = ai.katalysatorenRisicos?.katalysatoren
+        || ai.katalysatoren
+        || (ai.scenarios?.filter(s => s.naam === 'Bull').map(s => s.aanname) ?? []);
+    const risicosKat = ai.katalysatorenRisicos?.risicos
+        || ai.risicos
+        || (ai.risicosKwantitatief?.map(r => `${r.naam} (${r.omzetimpact})`) ?? []);
+    document.getElementById('kat-upside').textContent  = ls(katalysatoren.length  ? katalysatoren  : ['Zie scenario-analyse en DCF']);
+    document.getElementById('kat-downside').textContent = ls(risicosKat.length ? risicosKat : ['Zie kwantitatieve risicoparagraaf']);
 
     // ── Financieel overzicht tabel
     const fo = ai.financieelOverzicht || {};
@@ -630,23 +637,71 @@ function downloadPDF() {
     });
 }
 
-/* ── OPSLAAN / LADEN ──────────────────────────────────────────────────── */
+/* ── OPSLAAN ALS PDF ──────────────────────────────────────────────────── */
 async function saveToDatabase() {
     if (!currentFinData || !currentAiData) return;
-    const btn = document.getElementById('save-db-btn');
-    btn.textContent = 'Opslaan...';
+    const btn    = document.getElementById('save-db-btn');
+    const ticker = currentFinData.ticker || 'REPORT';
+    const date   = new Date().toISOString().slice(0, 10);
+    const filename = `DeAnalist_${ticker}_${date}.pdf`;
+
+    btn.textContent = '⏳ PDF genereren...';
+    btn.disabled = true;
+
     try {
+        const el = document.getElementById('report-template');
+        const origShadow = el.style.boxShadow;
+        el.style.boxShadow = 'none';
+
+        const opt = {
+            margin:      0,
+            filename,
+            image:       { type: 'jpeg', quality: 0.97 },
+            html2canvas: { scale: 2, useCORS: true, logging: false, width: 794, windowWidth: 794 },
+            jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+            pagebreak:   { mode: ['avoid-all', 'css', 'legacy'] }
+        };
+
+        // Genereer PDF als base64-string (geen download)
+        const pdfBase64 = await html2pdf()
+            .set(opt)
+            .from(el)
+            .toPdf()
+            .get('pdf')
+            .then(pdf => {
+                el.style.boxShadow = origShadow;
+                return pdf.output('datauristring').split(',')[1];
+            });
+
+        btn.textContent = '⏳ Uploaden...';
+
         const res = await fetch('/api/reports', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ kpiData: currentFinData, aiData: currentAiData })
+            body: JSON.stringify({ pdfBase64, filename, ticker, bedrijfsNaam: currentFinData.bedrijfsNaam })
         });
-        if (!res.ok) throw new Error('Opslaan mislukt.');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Opslaan mislukt.');
+
         btn.textContent = '✅ Opgeslagen!';
-        setTimeout(() => { btn.textContent = '💾 Opslaan op Vercel'; }, 3000);
+        btn.disabled = false;
+
+        // Toon de publieke URL
+        if (data.url) {
+            const link = document.createElement('a');
+            link.href = data.url;
+            link.target = '_blank';
+            link.textContent = '🔗 Bekijk PDF';
+            link.className = 'text-blue-400 text-xs ml-2 underline';
+            btn.parentNode.appendChild(link);
+            setTimeout(() => link.remove(), 10000);
+        }
+
+        setTimeout(() => { btn.textContent = '💾 Opslaan op Vercel'; }, 4000);
     } catch (err) {
         alert('Fout bij opslaan: ' + err.message);
         btn.textContent = '💾 Opslaan op Vercel';
+        btn.disabled = false;
     }
 }
 
