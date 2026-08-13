@@ -54,7 +54,7 @@
     <div class="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
         <div class="flex items-center gap-3">
             <span class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">DE ANALIST</span>
-            <span class="text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full">100% Gratis</span>
+
         </div>
         <button onclick="toggleSavedReports()" class="text-sm text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 transition">
             📁 Opgeslagen Rapporten
@@ -77,11 +77,15 @@
 
     <!-- Zoekbalk -->
     <section class="max-w-xl mx-auto text-center mb-10">
-        <h1 class="text-3xl font-extrabold mb-3">Genereer een Equity Research Report</h1>
-        <p class="text-slate-400 text-sm mb-6">Institutioneel rapport met DCF, scenario-analyse en kwantitatieve risicoparagraaf.</p>
-        <form id="search-form" class="flex gap-2 justify-center">
-            <input type="text" id="ticker-input" placeholder="Bijv. AAPL, ASML.AS, UCB.BR..."
-                class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500 flex-1 uppercase font-semibold" required>
+        <h1 class="text-3xl font-extrabold mb-3">Haal je Equity Research Report op per ticker</h1>
+        <p class="text-slate-400 text-sm mb-6"></p>
+        <form id="search-form" class="flex gap-2 justify-center relative">
+            <div class="relative flex-1">
+                <input type="text" id="ticker-input" placeholder="Zoek op naam of ticker (bijv. Apple, ASML, UCB)..."
+                    autocomplete="off"
+                    class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500 w-full font-semibold" required>
+                <ul id="autocomplete-list" class="absolute left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 hidden text-sm"></ul>
+            </div>
             <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white font-medium px-6 py-3 rounded-lg transition">
                 Analyseren
             </button>
@@ -92,8 +96,8 @@
     <!-- Loader -->
     <div id="loader" class="hidden text-center py-12">
         <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent mb-4"></div>
-        <p class="text-slate-300 font-medium">Marktdata ophalen & AI-analyse genereren...</p>
-        <p class="text-slate-500 text-xs mt-1">Ca. 8–12 seconden (DCF + scenario's + risicoparagraaf).</p>
+        <p class="text-slate-300 font-medium">Marktdata ophalen & analyse opstellen...</p>
+        <p class="text-slate-500 text-xs mt-1">Ca. 1 minuut.</p>
     </div>
 
     <!-- Acties + rapport -->
@@ -769,6 +773,59 @@ async function deleteReport(urlEncoded) {
         alert(`❌ ${err.message}`);
     }
 }
+
+// --- Autocomplete via /api/search ---
+(function () {
+    const input = document.getElementById('ticker-input');
+    const list  = document.getElementById('autocomplete-list');
+    let debounceTimer = null;
+    let selectedSymbol = null;
+
+    input.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        selectedSymbol = null;
+        const q = input.value.trim();
+        if (q.length < 1) { closeList(); return; }
+        debounceTimer = setTimeout(() => fetchSuggestions(q), 250);
+    });
+
+    async function fetchSuggestions(q) {
+        try {
+            const res  = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+            const data = await res.json();
+            if (!Array.isArray(data) || !data.length) { closeList(); return; }
+            renderList(data);
+        } catch { closeList(); }
+    }
+
+    function renderList(results) {
+        list.innerHTML = '';
+        results.forEach(r => {
+            const li = document.createElement('li');
+            li.className = 'px-4 py-2.5 hover:bg-slate-700 cursor-pointer flex justify-between items-center gap-2';
+            li.innerHTML = `
+                <span class="text-white font-semibold">${r.symbol}</span>
+                <span class="text-slate-400 text-xs truncate">${r.shortName}${r.exchange ? ' · ' + r.exchange : ''}</span>`;
+            li.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                selectedSymbol = r.symbol;
+                input.value = r.symbol;
+                closeList();
+            });
+            list.appendChild(li);
+        });
+        list.classList.remove('hidden');
+    }
+
+    function closeList() {
+        list.classList.add('hidden');
+        list.innerHTML = '';
+    }
+
+    document.addEventListener('click', (e) => {
+        if (!input.contains(e.target)) closeList();
+    });
+})();
 </script>
 </body>
 </html>
