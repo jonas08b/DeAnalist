@@ -12,25 +12,19 @@ export default async function handler(req, res) {
     // 1. Rapport opslaan in Vercel Blob
     if (req.method === 'POST') {
         try {
-            const { kpiData, aiData } = req.body;
-            
-            if (!kpiData || !aiData) {
+            const { ticker, title, pdfBase64 } = req.body;
+
+            if (!ticker || !pdfBase64) {
                 return res.status(400).json({ error: 'Ontbrekende data.' });
             }
 
-            const fileName = `reports/${kpiData.ticker}_${Date.now()}.json`;
-            const reportContent = JSON.stringify({
-                ticker: kpiData.ticker,
-                bedrijfsNaam: kpiData.bedrijfsNaam,
-                createdAt: new Date().toISOString(),
-                kpiData,
-                aiData
-            });
+            const fileName = `reports/${ticker}_${Date.now()}.pdf`;
+            const pdfBuffer = Buffer.from(pdfBase64, 'base64');
 
             // Upload rechtstreeks naar Vercel Blob
-            const blob = await put(fileName, reportContent, {
+            const blob = await put(fileName, pdfBuffer, {
                 access: 'public',
-                contentType: 'application/json',
+                contentType: 'application/pdf',
             });
 
             return res.status(200).json({ success: true, url: blob.url });
@@ -44,17 +38,16 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
         try {
             const { blobs } = await list({ prefix: 'reports/' });
-            
-            // Haal de inhoud op van alle gevonden bestanden
-            const reports = await Promise.all(
-                blobs.map(async (b) => {
-                    const response = await fetch(b.url);
-                    return await response.json();
-                })
-            );
+
+            // Geef de metadata terug (url, pathname, uploadedAt)
+            const reports = blobs.map((b) => ({
+                url: b.url,
+                pathname: b.pathname,
+                uploadedAt: b.uploadedAt,
+            }));
 
             // Sorteer op nieuwste eerst
-            reports.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            reports.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
 
             return res.status(200).json(reports);
         } catch (error) {
