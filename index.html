@@ -2,18 +2,263 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="format-detection" content="telephone=no">
     <title>DeAnalist — Institutional Equity Research</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&display=swap');
 
-        /* ─── PDF ROOT ───────────────────────────────────────────────────────
-           794px = A4-breedte bij 96dpi.
-           box-sizing:border-box zorgt dat padding BINNEN de 794px valt.
-           Hierdoor past alles exact op A4 zonder rechts afsnijden.          */
+        @font-face {
+            font-family: 'Roobert';
+            src: url('https://de-brief.vercel.app/Roobert-Regular.woff') format('woff');
+            font-weight: 400;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Roobert';
+            src: url('https://de-brief.vercel.app/Roobert-Bold.woff') format('woff');
+            font-weight: 700;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        /* ── DeBrief Design Tokens ── */
+        :root {
+            --bg: #101417;
+            --bg-card: #1a1e22;
+            --bg-card2: #1f2428;
+            --ink: #ffffff;
+            --ink-muted: #888888;
+            --ink-faint: #444444;
+            --accent: #C8311A;
+            --border: #2a2e32;
+            --font-sans: 'Roobert','DM Sans',-apple-system,system-ui,sans-serif;
+            --font-serif: 'DM Serif Display','Georgia',serif;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { font-size: 16px; -webkit-text-size-adjust: 100%; scrollbar-width: none; }
+        html::-webkit-scrollbar { display: none; }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg);
+            color: var(--ink);
+            min-height: 100vh;
+        }
+        body::-webkit-scrollbar { display: none; }
+
+        /* ── HEADER ── */
+        .da-header {
+            position: sticky; top: 0; left: 0; right: 0; z-index: 100;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+            padding: calc(var(--safe-top) + 14px) 20px 14px;
+        }
+        .da-header-inner {
+            max-width: 860px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .da-logo {
+            font-family: var(--font-serif);
+            font-size: 28px;
+            letter-spacing: -.5px;
+            line-height: 1;
+            color: var(--ink);
+            text-decoration: none;
+        }
+        .da-logo span { color: var(--accent); }
+
+        .da-header-actions { display: flex; align-items: center; gap: 6px; }
+
+        .da-icon-btn {
+            display: flex; align-items: center; gap: 7px;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 20px; padding: 7px 13px;
+            font-family: var(--font-sans); font-size: 13px; font-weight: 500;
+            color: var(--ink-muted); cursor: pointer;
+            transition: color .15s, border-color .15s;
+            -webkit-tap-highlight-color: transparent;
+            white-space: nowrap;
+        }
+        .da-icon-btn:hover { color: var(--ink); border-color: #444; }
+        .da-icon-btn svg {
+            width: 15px; height: 15px; stroke: currentColor; fill: none;
+            stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+            flex-shrink: 0;
+        }
+
+        /* ── MAIN ── */
+        .da-main {
+            max-width: 860px; margin: 0 auto;
+            padding: 0 20px calc(var(--safe-bottom) + 48px);
+        }
+
+        /* ── OPGESLAGEN PANEL ── */
+        .da-saved-panel {
+            display: none;
+            margin: 20px 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .da-saved-panel.visible { display: block; }
+        .da-saved-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        .da-saved-title {
+            font-family: var(--font-serif); font-size: 18px; color: var(--ink);
+        }
+        .da-close-btn {
+            background: none; border: none; cursor: pointer;
+            font-size: 13px; color: var(--ink-muted);
+            font-family: var(--font-sans); padding: 4px 8px;
+            border-radius: 8px; transition: color .15s;
+        }
+        .da-close-btn:hover { color: var(--ink); }
+        .da-saved-body { padding: 16px 20px; }
+        .da-saved-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+        .da-saved-card {
+            background: var(--bg-card2); border: 1px solid var(--border);
+            border-radius: 12px; padding: 14px;
+            display: flex; justify-content: space-between; align-items: center; gap: 10px;
+        }
+        .da-saved-card-info .ticker {
+            font-size: 14px; font-weight: 700; color: var(--ink);
+        }
+        .da-saved-card-info .datum {
+            font-size: 11px; color: var(--ink-muted); margin-top: 2px;
+        }
+        .da-saved-btns { display: flex; gap: 6px; flex-shrink: 0; }
+        .da-btn-sm {
+            font-family: var(--font-sans); font-size: 12px; font-weight: 600;
+            padding: 5px 10px; border-radius: 8px; border: none; cursor: pointer;
+            -webkit-tap-highlight-color: transparent; transition: opacity .15s;
+        }
+        .da-btn-sm:hover { opacity: .8; }
+        .da-btn-open { background: var(--ink); color: #000; }
+        .da-btn-del  { background: #2a0a0a; color: #f87171; border: 1px solid #3a1010; }
+        .da-empty-text { font-size: 13px; color: var(--ink-muted); }
+
+        /* ── HERO ZOEKBALK ── */
+        .da-hero {
+            padding: 48px 0 36px;
+            text-align: center;
+        }
+        .da-hero-title {
+            font-family: var(--font-serif);
+            font-size: 38px;
+            line-height: 1.15;
+            letter-spacing: -.5px;
+            color: var(--ink);
+            margin-bottom: 10px;
+        }
+        .da-hero-title span { color: var(--accent); }
+        .da-hero-sub {
+            font-size: 14px; color: var(--ink-muted); margin-bottom: 28px; line-height: 1.5;
+        }
+
+        .da-search-wrap {
+            display: flex; gap: 8px; max-width: 560px; margin: 0 auto;
+            position: relative;
+        }
+        .da-search-input-wrap { flex: 1; position: relative; }
+        .da-search-input {
+            width: 100%;
+            background: var(--bg-card); border: 1.5px solid var(--border);
+            color: var(--ink);
+            font-family: var(--font-sans); font-size: 15px; font-weight: 500;
+            border-radius: 12px; padding: 13px 16px;
+            outline: none; transition: border-color .15s;
+        }
+        .da-search-input::placeholder { color: var(--ink-faint); font-weight: 400; }
+        .da-search-input:focus { border-color: #555; }
+
+        .da-autocomplete-list {
+            position: absolute; left: 0; right: 0; top: calc(100% + 6px);
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.5);
+            z-index: 50; overflow: hidden;
+            display: none;
+        }
+        .da-autocomplete-list.open { display: block; }
+        .da-autocomplete-list li {
+            display: flex; justify-content: space-between; align-items: center; gap: 10px;
+            padding: 11px 16px; cursor: pointer; list-style: none;
+            font-size: 14px; transition: background .1s;
+        }
+        .da-autocomplete-list li:hover { background: var(--bg-card2); }
+        .da-autocomplete-list li .sym { font-weight: 700; color: var(--ink); }
+        .da-autocomplete-list li .name { color: var(--ink-muted); font-size: 12px; text-align: right; }
+
+        .da-search-btn {
+            font-family: var(--font-sans); font-size: 14px; font-weight: 700;
+            background: var(--accent); color: #fff;
+            border: none; border-radius: 12px; padding: 13px 22px;
+            cursor: pointer; white-space: nowrap;
+            -webkit-tap-highlight-color: transparent;
+            transition: opacity .15s;
+            flex-shrink: 0;
+        }
+        .da-search-btn:hover { opacity: .88; }
+
+        .da-error {
+            font-size: 13px; color: #f87171; margin-top: 10px;
+            display: none;
+        }
+        .da-error.visible { display: block; }
+
+        /* ── LOADER ── */
+        .da-loader {
+            display: none; text-align: center; padding: 64px 0;
+        }
+        .da-loader.visible { display: block; }
+        .da-spinner {
+            width: 36px; height: 36px; border: 2px solid #333;
+            border-top-color: var(--accent); border-radius: 50%;
+            animation: daspin .8s linear infinite; margin: 0 auto 16px;
+        }
+        @keyframes daspin { to { transform: rotate(360deg); } }
+        .da-loader p { font-size: 14px; color: var(--ink-muted); line-height: 1.6; }
+        .da-loader p small { font-size: 12px; color: var(--ink-faint); display: block; margin-top: 4px; }
+
+        /* ── RAPPORT ACTIES ── */
+        .da-report-actions {
+            display: none; justify-content: flex-end; gap: 8px;
+            max-width: 794px; margin: 0 auto 16px;
+        }
+        .da-report-actions.visible { display: flex; }
+
+        .da-action-btn {
+            display: flex; align-items: center; gap: 7px;
+            font-family: var(--font-sans); font-size: 13px; font-weight: 600;
+            padding: 9px 16px; border-radius: 10px; border: none; cursor: pointer;
+            -webkit-tap-highlight-color: transparent; transition: opacity .15s;
+        }
+        .da-action-btn:hover { opacity: .85; }
+        .da-action-btn svg {
+            width: 15px; height: 15px; stroke: currentColor; fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+        }
+        .da-btn-save  { background: var(--bg-card); border: 1px solid var(--border); color: var(--ink-muted); }
+        .da-btn-save:hover { color: var(--ink); }
+        .da-btn-pdf   { background: var(--accent); color: #fff; }
+
+        /* ── RAPPORT CONTAINER ── */
+        .da-report-outer {
+            display: none;
+        }
+        .da-report-outer.visible { display: block; }
+
+        /* ─── PDF ROOT — NIET AANRAKEN ──────────────────────────────────── */
         #report-template {
             width: 794px;
             box-sizing: border-box;
@@ -24,8 +269,6 @@
             line-height: 1.55;
             margin: 0 auto;
         }
-
-        /* Vermijd pagina-afkap binnen elementen */
         #report-template table,
         #report-template .no-break {
             page-break-inside: avoid;
@@ -45,312 +288,325 @@
         .kans-Hoog   { background:#fee2e2; color:#991b1b; }
         .kans-Middel { background:#fef9c3; color:#854d0e; }
         .kans-Laag   { background:#dcfce7; color:#166534; }
+
+        /* ── RAPPORT WRAPPER in dark shell ── */
+        .da-report-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            padding: 20px;
+            max-width: 834px;
+            margin: 0 auto;
+        }
+
+        /* ── PROGRESS BAR ── */
+        .da-progress-bar {
+            position: fixed; top: 0; left: 0; height: 2px;
+            background: var(--accent); width: 0%; z-index: 999;
+            transition: width .25s ease;
+        }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen">
+<body>
 
-<!-- ── HEADER ─────────────────────────────────────────────────────────── -->
-<header class="border-b border-slate-800 bg-slate-950/50 backdrop-blur sticky top-0 z-50">
-    <div class="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
-        <div class="flex items-center gap-3">
-            <span class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">DE ANALIST</span>
+<div class="da-progress-bar" id="progressBar"></div>
 
+<!-- ── HEADER ── -->
+<header class="da-header">
+    <div class="da-header-inner">
+        <a href="#" class="da-logo">De<span>Analist</span></a>
+        <div class="da-header-actions">
+            <button onclick="toggleSavedReports()" class="da-icon-btn">
+                <svg viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                Opgeslagen Rapporten
+            </button>
         </div>
-        <button onclick="toggleSavedReports()" class="text-sm text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 transition">
-            📁 Opgeslagen Rapporten
-        </button>
     </div>
 </header>
 
-<main class="max-w-5xl mx-auto px-4 py-8">
+<main class="da-main">
 
-    <!-- Opgeslagen Rapporten -->
-    <section id="saved-modal" class="hidden mb-8 bg-slate-800 border border-slate-700 p-5 rounded-xl shadow-2xl">
-        <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
-            <h2 class="font-bold text-lg text-blue-400">Opgeslagen Rapporten</h2>
-            <button onclick="toggleSavedReports()" class="text-slate-400 hover:text-white text-sm">sluiten ✕</button>
+    <!-- Opgeslagen Rapporten Panel -->
+    <div id="saved-modal" class="da-saved-panel">
+        <div class="da-saved-header">
+            <div class="da-saved-title">Opgeslagen Rapporten</div>
+            <button onclick="toggleSavedReports()" class="da-close-btn">Sluiten ✕</button>
         </div>
-        <div id="saved-list" class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <p class="text-slate-400 text-xs col-span-3">Laden...</p>
-        </div>
-    </section>
-
-    <!-- Zoekbalk -->
-    <section class="max-w-xl mx-auto text-center mb-10">
-        <h1 class="text-3xl font-extrabold mb-3">Haal je Equity Research Report op per ticker</h1>
-        <p class="text-slate-400 text-sm mb-6"></p>
-        <form id="search-form" class="flex gap-2 justify-center relative">
-            <div class="relative flex-1">
-                <input type="text" id="ticker-input" placeholder="Zoek op naam of ticker (bijv. Apple, ASML, UCB)..."
-                    autocomplete="off"
-                    class="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500 w-full font-semibold" required>
-                <ul id="autocomplete-list" class="absolute left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 hidden text-sm"></ul>
+        <div class="da-saved-body">
+            <div id="saved-list" class="da-saved-grid">
+                <p class="da-empty-text">Laden…</p>
             </div>
-            <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white font-medium px-6 py-3 rounded-lg transition">
-                Analyseren
-            </button>
+        </div>
+    </div>
+
+    <!-- Hero + Zoekbalk -->
+    <section class="da-hero">
+        <h1 class="da-hero-title">Equity Research<br><span>per ticker</span></h1>
+        <p class="da-hero-sub">Voer een aandelennaam of ticker in en ontvang een volledig institutioneel analyserapport.</p>
+
+        <form id="search-form" class="da-search-wrap">
+            <div class="da-search-input-wrap">
+                <input type="text" id="ticker-input"
+                    placeholder="Zoek op naam of ticker (bijv. Apple, ASML, UCB)…"
+                    autocomplete="off"
+                    class="da-search-input"
+                    required>
+                <ul id="autocomplete-list" class="da-autocomplete-list"></ul>
+            </div>
+            <button type="submit" class="da-search-btn">Analyseren</button>
         </form>
-        <p id="error-msg" class="text-red-400 text-sm mt-3 hidden"></p>
+        <p id="error-msg" class="da-error"></p>
     </section>
 
     <!-- Loader -->
-    <div id="loader" class="hidden text-center py-12">
-        <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent mb-4"></div>
-        <p class="text-slate-300 font-medium">Marktdata ophalen & analyse opstellen...</p>
-        <p class="text-slate-500 text-xs mt-1">Ca. 1 minuut.</p>
+    <div id="loader" class="da-loader">
+        <div class="da-spinner"></div>
+        <p>Marktdata ophalen &amp; analyse opstellen…<small>Ca. 1 minuut.</small></p>
     </div>
 
-    <!-- Acties + rapport -->
-    <section id="report-container" class="hidden">
-        <div class="flex justify-end gap-3 max-w-[794px] mx-auto mb-4">
-            <button id="save-db-btn" onclick="saveToDatabase()"
-                class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition">
-                💾 Opslaan op Vercel
+    <!-- Rapport acties + rapport -->
+    <section id="report-container" class="da-report-outer">
+        <div class="da-report-actions visible" id="report-actions">
+            <button id="save-db-btn" onclick="saveToDatabase()" class="da-action-btn da-btn-save">
+                <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Opslaan op Vercel
             </button>
-            <button onclick="downloadPDF()"
-                class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition">
-                📄 Download PDF
+            <button onclick="downloadPDF()" class="da-action-btn da-btn-pdf">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                Download PDF
             </button>
         </div>
 
-        <!-- ════════════════════════════════════════════════════════════════
-             PDF TEMPLATE  (794px = exact A4-breedte, box-sizing:border-box)
-             ════════════════════════════════════════════════════════════════ -->
-        <div id="report-template">
+        <div class="da-report-card">
+            <!-- ════ PDF TEMPLATE — NIET AANRAKEN ════ -->
+            <div id="report-template">
 
-            <!-- ① RAPPORT HEADER -->
-            <div style="border-bottom:2px solid #0f172a;padding-bottom:10px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-end;" class="no-break">
-                <div>
-                    <div style="font-size:7.5px;font-weight:700;letter-spacing:2px;color:#64748b;text-transform:uppercase;margin-bottom:4px;">
-                        DE ANALIST — EQUITY RESEARCH · Research Department
-                    </div>
-                    <div id="pdf-title" style="font-size:21px;font-weight:800;color:#0f172a;margin-bottom:3px;"></div>
-                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                        <span id="pdf-subtitle" style="font-size:10.5px;font-weight:600;color:#1d4ed8;"></span>
-                        <span id="pdf-badge"    style="font-size:8px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:1px;text-transform:uppercase;"></span>
-                        <span id="pdf-horizon"  style="font-size:8.5px;color:#64748b;"></span>
-                    </div>
-                </div>
-                <div style="text-align:right;font-size:8.5px;color:#64748b;line-height:1.8;min-width:120px;">
-                    <div>Datum: <span id="pdf-date" style="font-weight:600;color:#0f172a;"></span></div>
-                    <div>Koersdoel: <span id="pdf-koersdoel-header" style="font-weight:700;color:#0f172a;"></span></div>
-                    <div>Upside/downside: <span id="pdf-upside" style="font-weight:700;"></span></div>
-                </div>
-            </div>
-
-            <!-- ② KPI STRIP -->
-            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;background:#f1f5f9;padding:7px;border-radius:4px;border:1px solid #e2e8f0;text-align:center;margin-bottom:10px;" class="no-break">
-                <div><div style="font-size:6.5px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Koers</div><div id="kpi-koers" style="font-weight:700;font-size:10.5px;color:#0f172a;"></div></div>
-                <div><div style="font-size:6.5px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Koersdoel</div><div id="kpi-doel" style="font-weight:700;font-size:10.5px;color:#0f172a;"></div></div>
-                <div><div style="font-size:6.5px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Market Cap</div><div id="kpi-mcap" style="font-weight:700;font-size:10.5px;color:#0f172a;"></div></div>
-                <div><div style="font-size:6.5px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px;">K/W (P/E)</div><div id="kpi-pe" style="font-weight:700;font-size:10.5px;color:#0f172a;"></div></div>
-                <div><div style="font-size:6.5px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Omzet</div><div id="kpi-omzet" style="font-weight:700;font-size:10.5px;color:#0f172a;"></div></div>
-                <div><div style="font-size:6.5px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Nettomarge</div><div id="kpi-marge" style="font-weight:700;font-size:10.5px;color:#0f172a;"></div></div>
-                <div><div style="font-size:6.5px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Dividend</div><div id="kpi-div" style="font-weight:700;font-size:10.5px;color:#0f172a;"></div></div>
-            </div>
-
-            <!-- ③ KOERSDOEL METHODOLOGIE -->
-            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:7px 10px;margin-bottom:10px;" class="no-break">
-                <span style="font-size:7px;font-weight:700;text-transform:uppercase;color:#1e40af;letter-spacing:1px;">Koersdoel Methodologie · </span>
-                <span id="pdf-koersdoel-methode" style="font-size:9.5px;color:#1e3a8a;"></span>
-            </div>
-
-            <!-- ④ FINANCIEEL OVERZICHT -->
-            <div style="margin-bottom:10px;" class="no-break">
-                <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:6px;">Financieel Overzicht</div>
-                <table style="width:100%;border-collapse:collapse;font-size:8.5px;">
-                    <thead>
-                        <tr style="background:#0f172a;color:#fff;font-size:7.5px;text-transform:uppercase;letter-spacing:0.5px;">
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:left;width:28%;">Indicator</th>
-                            <th id="fin-j0" style="padding:4px 6px;border:1px solid #334155;text-align:center;"></th>
-                            <th id="fin-j1" style="padding:4px 6px;border:1px solid #334155;text-align:center;"></th>
-                            <th id="fin-j2" style="padding:4px 6px;border:1px solid #334155;text-align:center;"></th>
-                            <th id="fin-j3" style="padding:4px 6px;border:1px solid #334155;text-align:center;"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="fin-tbody"></tbody>
-                </table>
-                <div id="fin-bron" style="font-size:7.5px;color:#94a3b8;margin-top:3px;"></div>
-            </div>
-
-            <!-- ⑤ INVESTMENT THESIS -->
-            <div style="margin-bottom:10px;">
-                <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:5px;">Investment Thesis</div>
-                <p id="pdf-thesis" style="text-align:justify;color:#334155;line-height:1.6;margin:0;"></p>
-            </div>
-
-            <!-- ⑥ BUSINESSMODEL -->
-            <div style="margin-bottom:10px;">
-                <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:5px;">Businessmodel & Sectorcontext</div>
-                <p id="pdf-business" style="text-align:justify;color:#334155;line-height:1.6;margin:0;"></p>
-            </div>
-
-            <!-- ⑦ SWOT + KATALYSATOREN (2 kolommen) -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;" class="no-break">
-                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:9px;">
-                    <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:7px;">SWOT-Analyse</div>
-                    <div style="margin-bottom:5px;">
-                        <div style="font-size:8px;font-weight:700;color:#166534;margin-bottom:2px;">▲ Sterktes</div>
-                        <div id="swot-sterktes" style="font-size:8.5px;color:#334155;line-height:1.5;white-space:pre-line;"></div>
-                    </div>
-                    <div style="margin-bottom:5px;">
-                        <div style="font-size:8px;font-weight:700;color:#9a3412;margin-bottom:2px;">▼ Zwaktes</div>
-                        <div id="swot-zwaktes" style="font-size:8.5px;color:#334155;line-height:1.5;white-space:pre-line;"></div>
-                    </div>
-                    <div style="margin-bottom:5px;">
-                        <div style="font-size:8px;font-weight:700;color:#1e40af;margin-bottom:2px;">◆ Kansen</div>
-                        <div id="swot-kansen" style="font-size:8.5px;color:#334155;line-height:1.5;white-space:pre-line;"></div>
-                    </div>
+                <!-- ① RAPPORT HEADER -->
+                <div style="border-bottom:2px solid #0f172a;padding-bottom:10px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-end;" class="no-break">
                     <div>
-                        <div style="font-size:8px;font-weight:700;color:#7e22ce;margin-bottom:2px;">● Bedreigingen</div>
-                        <div id="swot-bedreigingen" style="font-size:8.5px;color:#334155;line-height:1.5;white-space:pre-line;"></div>
+                        <div style="font-size:7.5px;font-weight:700;letter-spacing:2px;color:#64748b;text-transform:uppercase;margin-bottom:4px;">
+                            DE ANALIST — EQUITY RESEARCH · Research Department
+                        </div>
+                        <div id="pdf-title" style="font-size:21px;font-weight:800;color:#0f172a;margin-bottom:3px;"></div>
+                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                            <span id="pdf-subtitle" style="font-size:10.5px;font-weight:600;color:#1d4ed8;"></span>
+                            <span id="pdf-badge"    style="font-size:8px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:1px;text-transform:uppercase;"></span>
+                            <span id="pdf-horizon"  style="font-size:8.5px;color:#64748b;"></span>
+                        </div>
+                    </div>
+                    <div style="text-align:right;font-size:8.5px;color:#64748b;line-height:1.8;min-width:120px;">
+                        <div>Datum: <span id="pdf-date" style="font-weight:600;color:#0f172a;"></span></div>
+                        <div>Koersdoel: <span id="pdf-koersdoel-header" style="font-weight:700;color:#0f172a;"></span></div>
+                        <div>Upside/downside: <span id="pdf-upside" style="font-weight:700;"></span></div>
                     </div>
                 </div>
-                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:9px;">
-                    <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:7px;">Katalysatoren & Risico's</div>
-                    <div style="margin-bottom:7px;">
-                        <div style="font-size:8px;font-weight:700;color:#166534;margin-bottom:2px;">▲ Upside</div>
-                        <div id="kat-upside" style="font-size:8.5px;color:#334155;line-height:1.5;white-space:pre-line;"></div>
+
+                <!-- ② KPI STRIP -->
+                <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;background:#f1f5f9;padding:7px;border-radius:4px;border:1px solid #e2e8f0;text-align:center;margin-bottom:10px;" class="no-break">
+                    <div><div style="font-size:6.5px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Koers</div><div id="kpi-koers" style="font-weight:700;font-size:10.5px;color:#0f172a;"></div></div>
+                    <div><div style="font-size:6.5px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Koersdoel</div><div id="kpi-doel" style="font-weight:700;font-size:10.5px;color:#0f172a;"></div></div>
+                    <div><div style="font-size:6.5px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Market Cap</div><div id="kpi-mcap" style="font-weight:700;font-size:10.5px;color:#0f172a;"></div></div>
+                    <div><div style="font-size:6.5px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px;">K/W (P/E)</div><div id="kpi-pe" style="font-weight:700;font-size:10.5px;color:#0f172a;"></div></div>
+                    <div><div style="font-size:6.5px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Omzet</div><div id="kpi-omzet" style="font-weight:700;font-size:10.5px;color:#0f172a;"></div></div>
+                    <div><div style="font-size:6.5px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Nettomarge</div><div id="kpi-marge" style="font-weight:700;font-size:10.5px;color:#0f172a;"></div></div>
+                    <div><div style="font-size:6.5px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Dividend</div><div id="kpi-div" style="font-weight:700;font-size:10.5px;color:#0f172a;"></div></div>
+                </div>
+
+                <!-- ③ KOERSDOEL METHODOLOGIE -->
+                <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:7px 10px;margin-bottom:10px;" class="no-break">
+                    <span style="font-size:7px;font-weight:700;text-transform:uppercase;color:#1e40af;letter-spacing:1px;">Koersdoel Methodologie · </span>
+                    <span id="pdf-koersdoel-methode" style="font-size:9.5px;color:#1e3a8a;"></span>
+                </div>
+
+                <!-- ④ FINANCIEEL OVERZICHT -->
+                <div style="margin-bottom:10px;" class="no-break">
+                    <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:6px;">Financieel Overzicht</div>
+                    <table style="width:100%;border-collapse:collapse;font-size:8.5px;">
+                        <thead>
+                            <tr style="background:#0f172a;color:#fff;font-size:7.5px;text-transform:uppercase;letter-spacing:0.5px;">
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:left;width:28%;">Indicator</th>
+                                <th id="fin-j0" style="padding:4px 6px;border:1px solid #334155;text-align:center;"></th>
+                                <th id="fin-j1" style="padding:4px 6px;border:1px solid #334155;text-align:center;"></th>
+                                <th id="fin-j2" style="padding:4px 6px;border:1px solid #334155;text-align:center;"></th>
+                                <th id="fin-j3" style="padding:4px 6px;border:1px solid #334155;text-align:center;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="fin-tbody"></tbody>
+                    </table>
+                    <div id="fin-bron" style="font-size:7.5px;color:#94a3b8;margin-top:3px;"></div>
+                </div>
+
+                <!-- ⑤ INVESTMENT THESIS -->
+                <div style="margin-bottom:10px;">
+                    <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:5px;">Investment Thesis</div>
+                    <p id="pdf-thesis" style="text-align:justify;color:#334155;line-height:1.6;margin:0;"></p>
+                </div>
+
+                <!-- ⑥ BUSINESSMODEL -->
+                <div style="margin-bottom:10px;">
+                    <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:5px;">Businessmodel & Sectorcontext</div>
+                    <p id="pdf-business" style="text-align:justify;color:#334155;line-height:1.6;margin:0;"></p>
+                </div>
+
+                <!-- ⑦ SWOT + KATALYSATOREN -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;" class="no-break">
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:9px;">
+                        <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:7px;">SWOT-Analyse</div>
+                        <div style="margin-bottom:5px;">
+                            <div style="font-size:8px;font-weight:700;color:#166534;margin-bottom:2px;">▲ Sterktes</div>
+                            <div id="swot-sterktes" style="font-size:8.5px;color:#334155;line-height:1.5;white-space:pre-line;"></div>
+                        </div>
+                        <div style="margin-bottom:5px;">
+                            <div style="font-size:8px;font-weight:700;color:#9a3412;margin-bottom:2px;">▼ Zwaktes</div>
+                            <div id="swot-zwaktes" style="font-size:8.5px;color:#334155;line-height:1.5;white-space:pre-line;"></div>
+                        </div>
+                        <div style="margin-bottom:5px;">
+                            <div style="font-size:8px;font-weight:700;color:#1e40af;margin-bottom:2px;">◆ Kansen</div>
+                            <div id="swot-kansen" style="font-size:8.5px;color:#334155;line-height:1.5;white-space:pre-line;"></div>
+                        </div>
+                        <div>
+                            <div style="font-size:8px;font-weight:700;color:#7e22ce;margin-bottom:2px;">● Bedreigingen</div>
+                            <div id="swot-bedreigingen" style="font-size:8.5px;color:#334155;line-height:1.5;white-space:pre-line;"></div>
+                        </div>
                     </div>
-                    <div>
-                        <div style="font-size:8px;font-weight:700;color:#9a3412;margin-bottom:2px;">▼ Downside</div>
-                        <div id="kat-downside" style="font-size:8.5px;color:#334155;line-height:1.5;white-space:pre-line;"></div>
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:9px;">
+                        <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:7px;">Katalysatoren & Risico's</div>
+                        <div style="margin-bottom:7px;">
+                            <div style="font-size:8px;font-weight:700;color:#166534;margin-bottom:2px;">▲ Upside</div>
+                            <div id="kat-upside" style="font-size:8.5px;color:#334155;line-height:1.5;white-space:pre-line;"></div>
+                        </div>
+                        <div>
+                            <div style="font-size:8px;font-weight:700;color:#9a3412;margin-bottom:2px;">▼ Downside</div>
+                            <div id="kat-downside" style="font-size:8.5px;color:#334155;line-height:1.5;white-space:pre-line;"></div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- ⑧ DCF TABEL -->
-            <div style="margin-bottom:10px;" class="no-break">
-                <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:6px;">DCF-Model — Prognoses FY2026E–FY2030E</div>
-
-                <!-- WACC opbouw -->
-                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:7px 10px;margin-bottom:6px;display:flex;gap:20px;flex-wrap:wrap;" class="no-break">
-                    <div style="font-size:7.5px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:4px;width:100%;">WACC-opbouw</div>
-                    <div style="font-size:8.5px;"><span style="color:#64748b;">Risicovrije rente: </span><span id="wacc-rf" style="font-weight:600;color:#0f172a;"></span></div>
-                    <div style="font-size:8.5px;"><span style="color:#64748b;">Beta: </span><span id="wacc-beta" style="font-weight:600;color:#0f172a;"></span></div>
-                    <div style="font-size:8.5px;"><span style="color:#64748b;">Marktrisicopremie: </span><span id="wacc-erp" style="font-weight:600;color:#0f172a;"></span></div>
-                    <div style="font-size:8.5px;"><span style="color:#64748b;">Schuldenpremie: </span><span id="wacc-debt" style="font-weight:600;color:#0f172a;"></span></div>
-                    <div style="font-size:8.5px;background:#0f172a;color:#fff;padding:2px 8px;border-radius:3px;font-weight:700;"><span>WACC: </span><span id="wacc-total"></span></div>
+                <!-- ⑧ DCF TABEL -->
+                <div style="margin-bottom:10px;" class="no-break">
+                    <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:6px;">DCF-Model — Prognoses FY2026E–FY2030E</div>
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:7px 10px;margin-bottom:6px;display:flex;gap:20px;flex-wrap:wrap;" class="no-break">
+                        <div style="font-size:7.5px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:4px;width:100%;">WACC-opbouw</div>
+                        <div style="font-size:8.5px;"><span style="color:#64748b;">Risicovrije rente: </span><span id="wacc-rf" style="font-weight:600;color:#0f172a;"></span></div>
+                        <div style="font-size:8.5px;"><span style="color:#64748b;">Beta: </span><span id="wacc-beta" style="font-weight:600;color:#0f172a;"></span></div>
+                        <div style="font-size:8.5px;"><span style="color:#64748b;">Marktrisicopremie: </span><span id="wacc-erp" style="font-weight:600;color:#0f172a;"></span></div>
+                        <div style="font-size:8.5px;"><span style="color:#64748b;">Schuldenpremie: </span><span id="wacc-debt" style="font-weight:600;color:#0f172a;"></span></div>
+                        <div style="font-size:8.5px;background:#0f172a;color:#fff;padding:2px 8px;border-radius:3px;font-weight:700;"><span>WACC: </span><span id="wacc-total"></span></div>
+                    </div>
+                    <table style="width:100%;border-collapse:collapse;font-size:8.5px;" class="no-break">
+                        <thead>
+                            <tr style="background:#0f172a;color:#fff;font-size:7.5px;text-transform:uppercase;letter-spacing:0.5px;">
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:left;">Indicator</th>
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">FY2026E</th>
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">FY2027E</th>
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">FY2028E</th>
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">FY2029E</th>
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">FY2030E</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dcf-tbody"></tbody>
+                    </table>
+                    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:4px;padding:7px 10px;margin-top:5px;" class="no-break">
+                        <span style="font-size:7.5px;font-weight:700;text-transform:uppercase;color:#166534;letter-spacing:1px;">Terminale Waarde · </span>
+                        <span id="dcf-tv" style="font-size:8.5px;color:#14532d;"></span>
+                    </div>
                 </div>
 
-                <!-- DCF prognose tabel -->
-                <table style="width:100%;border-collapse:collapse;font-size:8.5px;" class="no-break">
-                    <thead>
-                        <tr style="background:#0f172a;color:#fff;font-size:7.5px;text-transform:uppercase;letter-spacing:0.5px;">
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:left;">Indicator</th>
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">FY2026E</th>
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">FY2027E</th>
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">FY2028E</th>
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">FY2029E</th>
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">FY2030E</th>
-                        </tr>
-                    </thead>
-                    <tbody id="dcf-tbody"></tbody>
-                </table>
-
-                <!-- Terminale waarde -->
-                <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:4px;padding:7px 10px;margin-top:5px;" class="no-break">
-                    <span style="font-size:7.5px;font-weight:700;text-transform:uppercase;color:#166534;letter-spacing:1px;">Terminale Waarde · </span>
-                    <span id="dcf-tv" style="font-size:8.5px;color:#14532d;"></span>
+                <!-- ⑨ GEVOELIGHEIDSMATRIX -->
+                <div style="margin-bottom:10px;" class="no-break">
+                    <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:6px;">Gevoeligheidsmatrix — Koersdoel bij WACC × Terminale Groei</div>
+                    <table style="width:100%;border-collapse:collapse;font-size:8.5px;" id="gev-table">
+                        <thead>
+                            <tr style="background:#0f172a;color:#fff;font-size:7.5px;">
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">Groei ↓ / WACC →</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gev-tbody"></tbody>
+                    </table>
                 </div>
-            </div>
 
-            <!-- ⑨ GEVOELIGHEIDSMATRIX -->
-            <div style="margin-bottom:10px;" class="no-break">
-                <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:6px;">Gevoeligheidsmatrix — Koersdoel bij WACC × Terminale Groei</div>
-                <table style="width:100%;border-collapse:collapse;font-size:8.5px;" id="gev-table">
-                    <thead>
-                        <tr style="background:#0f172a;color:#fff;font-size:7.5px;">
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">Groei ↓ / WACC →</th>
-                        </tr>
-                    </thead>
-                    <tbody id="gev-tbody"></tbody>
-                </table>
-            </div>
+                <!-- ⑩ SCENARIO ANALYSE -->
+                <div style="margin-bottom:10px;" class="no-break">
+                    <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:6px;">Scenario-Analyse</div>
+                    <div id="scenarios-container" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;"></div>
+                </div>
 
-            <!-- ⑩ SCENARIO ANALYSE -->
-            <div style="margin-bottom:10px;" class="no-break">
-                <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:6px;">Scenario-Analyse</div>
-                <div id="scenarios-container" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;"></div>
-            </div>
+                <!-- ⑪ KWANTITATIEVE RISICOPARAGRAAF -->
+                <div style="margin-bottom:10px;" class="no-break">
+                    <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:6px;">Kwantitatieve Risicoparagraaf</div>
+                    <table style="width:100%;border-collapse:collapse;font-size:8.5px;">
+                        <thead>
+                            <tr style="background:#0f172a;color:#fff;font-size:7.5px;text-transform:uppercase;letter-spacing:0.5px;">
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:left;width:25%;">Risico</th>
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:center;width:18%;">Omzetimpact</th>
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:center;width:10%;">Kans</th>
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:center;width:10%;">Horizon</th>
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:left;">Mitigerende Factor</th>
+                            </tr>
+                        </thead>
+                        <tbody id="risico-tbody"></tbody>
+                    </table>
+                </div>
 
-            <!-- ⑪ KWANTITATIEVE RISICOPARAGRAAF -->
-            <div style="margin-bottom:10px;" class="no-break">
-                <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:6px;">Kwantitatieve Risicoparagraaf</div>
-                <table style="width:100%;border-collapse:collapse;font-size:8.5px;">
-                    <thead>
-                        <tr style="background:#0f172a;color:#fff;font-size:7.5px;text-transform:uppercase;letter-spacing:0.5px;">
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:left;width:25%;">Risico</th>
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:center;width:18%;">Omzetimpact</th>
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:center;width:10%;">Kans</th>
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:center;width:10%;">Horizon</th>
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:left;">Mitigerende Factor</th>
-                        </tr>
-                    </thead>
-                    <tbody id="risico-tbody"></tbody>
-                </table>
-            </div>
+                <!-- ⑫ PEER COMPARISON -->
+                <div style="margin-bottom:10px;">
+                    <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:6px;">Peer Comparison</div>
+                    <div style="font-size:8px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;">Laag 1 — Directe Sectorpeers</div>
+                    <table style="width:100%;border-collapse:collapse;font-size:8.5px;margin-bottom:7px;" class="no-break">
+                        <thead>
+                            <tr style="background:#1e293b;color:#fff;font-size:7.5px;text-transform:uppercase;letter-spacing:0.5px;">
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:left;">Bedrijf</th>
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">Ticker</th>
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">Fwd P/E</th>
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">EV/EBITDA</th>
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">PEG</th>
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">FCF-yield</th>
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">Nettomarge</th>
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:left;">Relevantie als Benchmark</th>
+                            </tr>
+                        </thead>
+                        <tbody id="peers-direct-tbody"></tbody>
+                    </table>
+                    <div style="font-size:8px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;">Laag 2 — Monopoliepremievergelijking (Structurele Moat)</div>
+                    <table style="width:100%;border-collapse:collapse;font-size:8.5px;" class="no-break">
+                        <thead>
+                            <tr style="background:#1e293b;color:#fff;font-size:7.5px;text-transform:uppercase;letter-spacing:0.5px;">
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:left;">Bedrijf</th>
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">Ticker</th>
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">P/E</th>
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:left;">Type Moat</th>
+                                <th style="padding:4px 6px;border:1px solid #334155;text-align:left;">Vergelijking met Subject</th>
+                            </tr>
+                        </thead>
+                        <tbody id="peers-moat-tbody"></tbody>
+                    </table>
+                </div>
 
-            <!-- ⑫ PEER COMPARISON (2 lagen) -->
-            <div style="margin-bottom:10px;">
-                <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:6px;">Peer Comparison</div>
+                <!-- ⑬ WAARDERING -->
+                <div style="margin-bottom:10px;">
+                    <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:5px;">Waarderingsniveau & Conclusie</div>
+                    <p id="pdf-waardering" style="text-align:justify;color:#334155;line-height:1.6;margin:0;"></p>
+                </div>
 
-                <!-- Laag 1: Directe sectorpeers -->
-                <div style="font-size:8px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;">Laag 1 — Directe Sectorpeers</div>
-                <table style="width:100%;border-collapse:collapse;font-size:8.5px;margin-bottom:7px;" class="no-break">
-                    <thead>
-                        <tr style="background:#1e293b;color:#fff;font-size:7.5px;text-transform:uppercase;letter-spacing:0.5px;">
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:left;">Bedrijf</th>
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">Ticker</th>
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">Fwd P/E</th>
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">EV/EBITDA</th>
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">PEG</th>
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">FCF-yield</th>
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">Nettomarge</th>
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:left;">Relevantie als Benchmark</th>
-                        </tr>
-                    </thead>
-                    <tbody id="peers-direct-tbody"></tbody>
-                </table>
+                <!-- ⑭ BRONVERMELDING -->
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:7px 10px;margin-bottom:8px;" class="no-break">
+                    <div style="font-size:7px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:3px;">Gebruikte Databronnen</div>
+                    <div id="pdf-bronnen" style="font-size:8.5px;color:#64748b;line-height:1.6;white-space:pre-line;"></div>
+                </div>
 
-                <!-- Laag 2: Monopoliepremie -->
-                <div style="font-size:8px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;">Laag 2 — Monopoliepremievergelijking (Structurele Moat)</div>
-                <table style="width:100%;border-collapse:collapse;font-size:8.5px;" class="no-break">
-                    <thead>
-                        <tr style="background:#1e293b;color:#fff;font-size:7.5px;text-transform:uppercase;letter-spacing:0.5px;">
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:left;">Bedrijf</th>
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">Ticker</th>
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:center;">P/E</th>
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:left;">Type Moat</th>
-                            <th style="padding:4px 6px;border:1px solid #334155;text-align:left;">Vergelijking met Subject</th>
-                        </tr>
-                    </thead>
-                    <tbody id="peers-moat-tbody"></tbody>
-                </table>
-            </div>
+                <!-- ⑮ DISCLAIMER -->
+                <div style="font-size:7.5px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:7px;text-align:justify;line-height:1.5;">
+                    <strong>Research Department — De Analist</strong> · Databronnen: Yahoo Finance (koers, market cap, omzet, marges, dividend),
+                    Financial Modeling Prep (consensus koersdoelen, peer-data), Google Gemini 2.0 Flash (AI-generatie, DCF-model, prognoses).
+                    Prognoses zijn gebaseerd op historische data en sectortrends — geen garantie op toekomstige resultaten.
+                    Dit rapport vormt op geen enkele wijze beleggingsadvies. Raadpleeg een erkend beleggingsadviseur.
+                </div>
 
-            <!-- ⑬ WAARDERING -->
-            <div style="margin-bottom:10px;">
-                <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:5px;">Waarderingsniveau & Conclusie</div>
-                <p id="pdf-waardering" style="text-align:justify;color:#334155;line-height:1.6;margin:0;"></p>
-            </div>
-
-            <!-- ⑭ BRONVERMELDING -->
-            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:7px 10px;margin-bottom:8px;" class="no-break">
-                <div style="font-size:7px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:3px;">Gebruikte Databronnen</div>
-                <div id="pdf-bronnen" style="font-size:8.5px;color:#64748b;line-height:1.6;white-space:pre-line;"></div>
-            </div>
-
-            <!-- ⑮ DISCLAIMER -->
-            <div style="font-size:7.5px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:7px;text-align:justify;line-height:1.5;">
-                <strong>Research Department — De Analist</strong> · Databronnen: Yahoo Finance (koers, market cap, omzet, marges, dividend),
-                Financial Modeling Prep (consensus koersdoelen, peer-data), Google Gemini 2.0 Flash (AI-generatie, DCF-model, prognoses).
-                Prognoses zijn gebaseerd op historische data en sectortrends — geen garantie op toekomstige resultaten.
-                Dit rapport vormt op geen enkele wijze beleggingsadvies. Raadpleeg een erkend beleggingsadviseur.
-            </div>
-
-        </div><!-- /report-template -->
+            </div><!-- /report-template -->
+        </div><!-- /da-report-card -->
     </section>
+
 </main>
 
 <script>
@@ -364,11 +620,13 @@ document.getElementById('search-form').addEventListener('submit', async (e) => {
 
     const loader          = document.getElementById('loader');
     const reportContainer = document.getElementById('report-container');
+    const reportActions   = document.getElementById('report-actions');
     const errorMsg        = document.getElementById('error-msg');
 
-    loader.classList.remove('hidden');
-    reportContainer.classList.add('hidden');
-    errorMsg.classList.add('hidden');
+    loader.classList.add('visible');
+    reportContainer.classList.remove('visible');
+    reportActions.classList.remove('visible');
+    errorMsg.classList.remove('visible');
 
     try {
         const finRes  = await fetch(`/api/financials?ticker=${encodeURIComponent(ticker)}`);
@@ -386,13 +644,14 @@ document.getElementById('search-form').addEventListener('submit', async (e) => {
         currentFinData = finData;
         currentAiData  = aiData;
         renderReport(finData, aiData);
-        loader.classList.add('hidden');
-        reportContainer.classList.remove('hidden');
+        loader.classList.remove('visible');
+        reportContainer.classList.add('visible');
+        reportActions.classList.add('visible');
 
     } catch (err) {
-        loader.classList.add('hidden');
+        loader.classList.remove('visible');
         errorMsg.textContent = err.message;
-        errorMsg.classList.remove('hidden');
+        errorMsg.classList.add('visible');
     }
 });
 
@@ -401,7 +660,6 @@ function renderReport(fin, ai) {
     const koers = typeof fin.koers    === 'number' ? fin.koers    : null;
     const doel  = typeof fin.koersdoel === 'number' ? fin.koersdoel : null;
 
-    // Header
     document.getElementById('pdf-title').textContent = `${fin.bedrijfsNaam} (${fin.ticker})`;
     document.getElementById('pdf-subtitle').textContent = ai.subtitel || '';
     document.getElementById('pdf-date').textContent = new Date().toLocaleDateString('nl-NL');
@@ -423,7 +681,6 @@ function renderReport(fin, ai) {
     }
     document.getElementById('pdf-koersdoel-methode').textContent = ai.koersdoelMethode || 'Niet beschikbaar';
 
-    // KPI strip
     document.getElementById('kpi-koers').textContent = koers ? fmt(koers)  : String(fin.koers);
     document.getElementById('kpi-doel').textContent  = doel  ? fmt(doel)   : String(fin.koersdoel);
     document.getElementById('kpi-mcap').textContent  = fmtBig(fin.marketCap);
@@ -432,17 +689,14 @@ function renderReport(fin, ai) {
     document.getElementById('kpi-marge').textContent = typeof fin.marge    === 'number' ? `${(fin.marge    * 100).toFixed(1)}%` : String(fin.marge);
     document.getElementById('kpi-div').textContent   = typeof fin.dividend === 'number' ? `${(fin.dividend * 100).toFixed(2)}%` : String(fin.dividend);
 
-    // Teksten
     document.getElementById('pdf-thesis').textContent    = ai.investmentThesis || '';
     document.getElementById('pdf-business').textContent  = ai.businessmodel    || '';
     document.getElementById('pdf-waardering').textContent = ai.waardering      || '';
 
-    // SWOT
     const ls = (arr) => Array.isArray(arr) ? arr.map((x,i) => `${i+1}. ${x}`).join('\n') : (arr || '');
     ['sterktes','zwaktes','kansen','bedreigingen'].forEach(k => {
         document.getElementById(`swot-${k}`).textContent = ls(ai.swot?.[k]);
     });
-    // Katalysatoren: gebruik katalysatorenRisicos; fallback op scenarios/risicosKwantitatief
     const katalysatoren = ai.katalysatorenRisicos?.katalysatoren
         || ai.katalysatoren
         || (ai.scenarios?.filter(s => s.naam === 'Bull').map(s => s.aanname) ?? []);
@@ -452,13 +706,9 @@ function renderReport(fin, ai) {
     document.getElementById('kat-upside').textContent  = ls(katalysatoren.length  ? katalysatoren  : ['Zie scenario-analyse en DCF']);
     document.getElementById('kat-downside').textContent = ls(risicosKat.length ? risicosKat : ['Zie kwantitatieve risicoparagraaf']);
 
-    // ── Financieel overzicht tabel
     const fo = ai.financieelOverzicht || {};
     const foJaren = fo.jaren || [];
-    foJaren.forEach((j, i) => {
-        const el = document.getElementById(`fin-j${i}`);
-        if (el) el.textContent = j;
-    });
+    foJaren.forEach((j, i) => { const el = document.getElementById(`fin-j${i}`); if (el) el.textContent = j; });
     const foRows = [
         { label: 'Omzet',       key: 'omzet'      },
         { label: 'Brutomarge',  key: 'brutomarge'  },
@@ -477,7 +727,6 @@ function renderReport(fin, ai) {
     }).join('');
     document.getElementById('fin-bron').textContent = fo.bron ? `Bron: ${fo.bron}` : '';
 
-    // ── DCF
     const dcf = ai.dcf || {};
     const wacc = dcf.wacc || {};
     document.getElementById('wacc-rf').textContent   = wacc.risicovrij   || '—';
@@ -501,23 +750,19 @@ function renderReport(fin, ai) {
         return `<tr style="background:${bg};"><td style="padding:3px 6px;border:1px solid #e2e8f0;font-weight:600;color:#334155;">${r.label}</td>${cells}</tr>`;
     }).join('');
 
-    // ── Gevoeligheidsmatrix
     const gev = dcf.gevoeligheid || {};
     const gevWacc  = gev.wacc   || [];
     const gevGroei = gev.groei  || [];
     const gevMatrix = gev.matrix || [];
-
     const gevTable = document.getElementById('gev-table');
     const gevHead  = gevTable.querySelector('thead tr');
-    // header: lege cel + WACC-waarden
     gevHead.innerHTML = `<th style="padding:4px 6px;border:1px solid #334155;text-align:center;background:#0f172a;color:#fff;font-size:7.5px;">Groei ↓ / WACC →</th>`
         + gevWacc.map(w => `<th style="padding:4px 6px;border:1px solid #334155;text-align:center;background:#0f172a;color:#fff;font-size:7.5px;">${w}</th>`).join('');
-
     const gevtb = document.getElementById('gev-tbody');
     gevtb.innerHTML = gevGroei.map((g, ri) => {
         const row = gevMatrix[ri] || [];
         const cells = gevWacc.map((_, ci) => {
-            const isCenter = (ri === 1 && ci === 1); // basis-scenario accentueren
+            const isCenter = (ri === 1 && ci === 1);
             const bg = isCenter ? '#dbeafe' : (ri % 2 === 0 ? '#f8fafc' : '#ffffff');
             const fw = isCenter ? '700' : '400';
             return `<td style="padding:3px 6px;border:1px solid #e2e8f0;text-align:center;background:${bg};font-weight:${fw};color:#0f172a;">${row[ci] || '—'}</td>`;
@@ -525,7 +770,6 @@ function renderReport(fin, ai) {
         return `<tr><td style="padding:3px 6px;border:1px solid #e2e8f0;font-weight:600;color:#334155;background:#f1f5f9;">${g}</td>${cells}</tr>`;
     }).join('');
 
-    // ── Scenarios
     const kleurMap = { Bull: 'sc-bull', Base: 'sc-base', Bear: 'sc-bear' };
     const scenarios = ai.scenarios || [];
     document.getElementById('scenarios-container').innerHTML = scenarios.map(s => {
@@ -540,7 +784,6 @@ function renderReport(fin, ai) {
         </div>`;
     }).join('');
 
-    // ── Kwantitatieve risico's
     const risicos = ai.risicosKwantitatief || [];
     const kansBg = { Hoog: '#fee2e2', Middel: '#fef9c3', Laag: '#dcfce7' };
     const kansTx = { Hoog: '#991b1b', Middel: '#854d0e', Laag: '#166534' };
@@ -559,7 +802,6 @@ function renderReport(fin, ai) {
         </tr>`;
     }).join('');
 
-    // ── Peers laag 1 (direct)
     const directe = ai.peers?.directe || [];
     document.getElementById('peers-direct-tbody').innerHTML = directe.map((p, i) => {
         const bg = i % 2 === 0 ? '#f8fafc' : '#ffffff';
@@ -575,7 +817,6 @@ function renderReport(fin, ai) {
         </tr>`;
     }).join('');
 
-    // ── Peers laag 2 (moat)
     const moat = ai.peers?.monopoliepremie || [];
     document.getElementById('peers-moat-tbody').innerHTML = moat.map((p, i) => {
         const bg = i % 2 === 0 ? '#f8fafc' : '#ffffff';
@@ -588,12 +829,11 @@ function renderReport(fin, ai) {
         </tr>`;
     }).join('');
 
-    // ── Bronnen
     const bronnen = ai.bronnen || [];
     document.getElementById('pdf-bronnen').textContent = bronnen.map((b, i) => `[${i+1}] ${b}`).join('\n');
 }
 
-/* ── HELPERS ──────────────────────────────────────────────────────────── */
+/* ── HELPERS ─────────────────────────────────────────────────────────── */
 function fmt(v) {
     if (typeof v !== 'number') return String(v);
     return `$${v.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -610,150 +850,87 @@ function fmtBig(v) {
 function downloadPDF() {
     const el = document.getElementById('report-template');
     const ticker = currentFinData?.ticker || 'REPORT';
-
-    // Sla oude inline-styles op
     const origShadow = el.style.boxShadow;
-    const origPosition = el.style.position;
-    
-    // Zorg dat het element exact op de oorsprong (0,0) staat voor html2canvas
     el.style.boxShadow = 'none';
-
     const opt = {
         margin:      0,
         filename:    `DeAnalist_${ticker}_${new Date().toISOString().slice(0,10)}.pdf`,
         image:       { type: 'jpeg', quality: 0.98 },
-        html2canvas: {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            width: 794,
-            windowWidth: 794,
-            scrollX: 0,
-            scrollY: 0,
-            x: 0,
-            y: 0
-        },
-        jsPDF: {
-            unit: 'mm',
-            format: 'a4',
-            orientation: 'portrait',
-            compress: true
-        },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        html2canvas: { scale: 2, useCORS: true, logging: false, width: 794, windowWidth: 794, scrollX: 0, scrollY: 0, x: 0, y: 0 },
+        jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+        pagebreak:   { mode: ['avoid-all', 'css', 'legacy'] }
     };
-
-    // Scroll bovenaan de pagina voor de zekerheid
     window.scrollTo(0, 0);
-
-    html2pdf().set(opt).from(el).save().then(() => {
-        el.style.boxShadow = origShadow;
-    });
+    html2pdf().set(opt).from(el).save().then(() => { el.style.boxShadow = origShadow; });
 }
-/* ── OPSLAAN ALS PDF ──────────────────────────────────────────────────── */
+
+/* ── OPSLAAN ─────────────────────────────────────────────────────────── */
 async function saveToDatabase() {
     const el = document.getElementById('report-template');
-    
-    // Fallbacks toevoegen als ticker of title ontbreken
     const ticker = currentFinData?.ticker || 'REPORT';
     const title = currentFinData?.profile?.name || currentFinData?.ticker || 'Financieel Rapport';
-
-    // Toon statusaanwijzing aan de gebruiker
-    const saveBtn = document.getElementById('save-db-btn'); // of de id van je knop
-    if (saveBtn) saveBtn.innerText = "⏳ Bezig met opslaan...";
-
+    const saveBtn = document.getElementById('save-db-btn');
+    if (saveBtn) saveBtn.innerText = '⏳ Bezig met opslaan…';
     try {
         const opt = {
-            margin:      0,
-            filename:    `DeAnalist_${ticker}_${new Date().toISOString().slice(0,10)}.pdf`,
-            image:       { type: 'jpeg', quality: 0.98 },
-            html2canvas: { 
-                scale: 2, 
-                useCORS: true, 
-                logging: false, 
-                width: 794, 
-                windowWidth: 794,
-                scrollX: 0,
-                scrollY: 0,
-                x: 0,
-                y: 0
-            },
-            jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-            pagebreak:   { mode: ['avoid-all', 'css', 'legacy'] }
+            margin: 0,
+            filename: `DeAnalist_${ticker}_${new Date().toISOString().slice(0,10)}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, logging: false, width: 794, windowWidth: 794, scrollX: 0, scrollY: 0, x: 0, y: 0 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
         };
-
-        // Genereer de PDF als base64 string
-        const pdfWorker = html2pdf().set(opt).from(el);
-        const pdf = await pdfWorker.outputPdf('datauristring');
-        
-        if (!pdf) {
-            throw new Error("PDF kon niet worden gegenereerd.");
-        }
-
+        const pdf = await html2pdf().set(opt).from(el).outputPdf('datauristring');
+        if (!pdf) throw new Error('PDF kon niet worden gegenereerd.');
         const base64Data = pdf.split(',')[1];
-
-        // Verstuur de data naar de Vercel API endpoint
         const response = await fetch('/api/reports', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                ticker: ticker,
-                title: title,
-                pdfBase64: base64Data
-            })
+            body: JSON.stringify({ ticker, title, pdfBase64: base64Data })
         });
-
         const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || 'Fout bij opslaan op Vercel');
-        }
-
+        if (!response.ok) throw new Error(data.error || 'Fout bij opslaan op Vercel');
         alert('✅ Rapport succesvol opgeslagen op Vercel Blob!');
     } catch (err) {
         console.error(err);
         alert(`❌ Fout bij opslaan: ${err.message}`);
     } finally {
-        if (saveBtn) saveBtn.innerText = "💾 Opslaan op Vercel";
+        if (saveBtn) saveBtn.innerText = '💾 Opslaan op Vercel';
     }
 }
-    
+
 async function toggleSavedReports() {
     const modal = document.getElementById('saved-modal');
-    modal.classList.toggle('hidden');
-    if (!modal.classList.contains('hidden')) {
-        await loadSavedReportsList();
-    }
+    modal.classList.toggle('visible');
+    if (modal.classList.contains('visible')) await loadSavedReportsList();
 }
 
 async function loadSavedReportsList() {
     const list = document.getElementById('saved-list');
-    list.innerHTML = '<p class="text-slate-400 text-xs col-span-3">Laden...</p>';
+    list.innerHTML = '<p class="da-empty-text">Laden…</p>';
     try {
         const res  = await fetch('/api/reports');
         const data = await res.json();
         if (!res.ok || !data?.length) {
-            list.innerHTML = '<p class="text-slate-400 text-xs col-span-3">Geen opgeslagen rapporten.</p>';
+            list.innerHTML = '<p class="da-empty-text">Geen opgeslagen rapporten.</p>';
             return;
         }
         list.innerHTML = data.map(item => {
             const datum = item.uploadedAt ? new Date(item.uploadedAt).toLocaleDateString('nl-NL') : '—';
             const urlEncoded = encodeURIComponent(item.url);
-            return `
-                <div class="bg-slate-900 border border-slate-700 p-3 rounded-lg flex justify-between items-center gap-2">
-                    <div class="min-w-0">
-                        <span class="font-bold text-white text-sm">${item.ticker}</span>
-                        <span class="block text-[10px] text-slate-400">${datum}</span>
-                    </div>
-                    <div class="flex gap-2 shrink-0">
-                        <a href="${item.url}" target="_blank"
-                            class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-2.5 py-1 rounded">Openen</a>
-                        <button onclick="deleteReport('${urlEncoded}')"
-                            class="bg-red-700 hover:bg-red-600 text-white text-xs px-2.5 py-1 rounded">Verwijderen</button>
-                    </div>
-                </div>`;
+            return `<div class="da-saved-card">
+                <div class="da-saved-card-info">
+                    <div class="ticker">${item.ticker}</div>
+                    <div class="datum">${datum}</div>
+                </div>
+                <div class="da-saved-btns">
+                    <a href="${item.url}" target="_blank" class="da-btn-sm da-btn-open">Openen</a>
+                    <button onclick="deleteReport('${urlEncoded}')" class="da-btn-sm da-btn-del">Verwijderen</button>
+                </div>
+            </div>`;
         }).join('');
     } catch {
-        list.innerHTML = '<p class="text-red-400 text-xs col-span-3">Kon rapporten niet laden.</p>';
+        list.innerHTML = '<p class="da-empty-text" style="color:#f87171;">Kon rapporten niet laden.</p>';
     }
 }
 
@@ -774,7 +951,7 @@ async function deleteReport(urlEncoded) {
     }
 }
 
-// --- Autocomplete via /api/search ---
+/* ── AUTOCOMPLETE ─────────────────────────────────────────────────────── */
 (function () {
     const input = document.getElementById('ticker-input');
     const list  = document.getElementById('autocomplete-list');
@@ -802,10 +979,7 @@ async function deleteReport(urlEncoded) {
         list.innerHTML = '';
         results.forEach(r => {
             const li = document.createElement('li');
-            li.className = 'px-4 py-2.5 hover:bg-slate-700 cursor-pointer flex justify-between items-center gap-2';
-            li.innerHTML = `
-                <span class="text-white font-semibold">${r.symbol}</span>
-                <span class="text-slate-400 text-xs truncate">${r.shortName}${r.exchange ? ' · ' + r.exchange : ''}</span>`;
+            li.innerHTML = `<span class="sym">${r.symbol}</span><span class="name">${r.shortName}${r.exchange ? ' · ' + r.exchange : ''}</span>`;
             li.addEventListener('mousedown', (e) => {
                 e.preventDefault();
                 selectedSymbol = r.symbol;
@@ -814,17 +988,15 @@ async function deleteReport(urlEncoded) {
             });
             list.appendChild(li);
         });
-        list.classList.remove('hidden');
+        list.classList.add('open');
     }
 
     function closeList() {
-        list.classList.add('hidden');
+        list.classList.remove('open');
         list.innerHTML = '';
     }
 
-    document.addEventListener('click', (e) => {
-        if (!input.contains(e.target)) closeList();
-    });
+    document.addEventListener('click', (e) => { if (!input.contains(e.target)) closeList(); });
 })();
 </script>
 </body>
