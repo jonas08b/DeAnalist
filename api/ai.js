@@ -17,18 +17,49 @@ export default async function handler(req, res) {
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash", timeout: 55000 });
 
-        const prompt = `
-Je bent een senior Equity Research Analyst (CFA-niveau). Analyseer het volgende bedrijf op basis van de aangeleverde marktdata.
+        const dataStr = JSON.stringify(kpiData, null, 2);
+
+        const prompt = `Je bent een senior Equity Research Analyst (CFA-niveau). Analyseer het volgende bedrijf op basis van de aangeleverde marktdata.
 Schrijf UITSLUITEND in het NEDERLANDS. Gebruik neutrale, institutionele taal — geen promotionele formuleringen.
 
 REGELS VOOR TAALGEBRUIK:
-- Vervang "superieur operationeel profiel" → "bovengemiddelde operationele efficiëntie"  
-- Vervang "uitmuntende marge" → "nettomarge van X%, significant boven sectorgemiddelde van Y%"
-- Vervang "onmisbare rol" → "structureel dominante marktpositie"
+- Vervang "superieur operationeel profiel" door "bovengemiddelde operationele efficiëntie"
+- Vervang "uitmuntende marge" door "nettomarge van X%, significant boven sectorgemiddelde van Y%"
+- Vervang "onmisbare rol" door "structureel dominante marktpositie"
 - Elk kwalitatief oordeel MOET gevolgd worden door een concreet getal
 
+KRITISCHE KWALITEITSEISEN — VERPLICHT IN ELKE SECTIE:
+
+1. KOERSDOEL VOLLEDIG HERLEIDBAAR
+Het eindkoersdoel moet stap voor stap worden afgeleid uit de onderliggende waarderingsmethoden.
+Werk dit als volgt uit in het veld koersdoelAfleiding:
+- DCF-waarde per aandeel: berekend gewicht en bijdrage
+- EV/EBITDA-methode: sectorgemiddelde multiple op EBITDA, min nettoschuld, gedeeld door aandelencount
+- P/E-methode: sectorgemiddelde multiple op forward EPS
+- Gewogen koersdoel = som van gewogen bijdragen
+Elk getal moet reproduceerbaar zijn door de lezer.
+
+2. TERMINALE WAARDE VOLLEDIG UITGEWERKT
+Verklaar in terminaleWaarde:
+- Gekozen groeivoet g gemotiveerd door verwachte nominale bbp-groei thuisland, sectorgroei langetermijn, en positie van het bedrijf
+- Berekening TV = FCF_t+1 / (WACC - g)
+- Contante waarde TV met kortingsfactor
+- Bridge EV naar Equity: EV minus nettoschuld plus kasoverschot gedeeld door aandelencount
+- Aandeel TV in totale EV in procenten
+
+3. PEER-SELECTIE METHODOLOGISCH VERDEDIGBAAR
+Selecteer peers op basis van DRIE criteria tegelijk: business-mix, margestructuur (EBIT-marge binnen 5 procentpunt), groeiprofiel (omzetgroei CAGR binnen 3 procentpunt).
+Vermeld per peer expliciet aan hoeveel van de drie criteria wordt voldaan.
+Sluit peers uit die op slechts een criterium vergelijkbaar zijn, tenzij je onderbouwt waarom ze toch relevant zijn.
+
+4. SCENARIO'S REKENKUNDIG CONSISTENT MET KOERSDOEL
+De kansen en koersdoelen van de drie scenario's MOETEN rekenkundig aansluiten op het eindkoersdoel.
+Gewogen koersdoel = (Bull-koersdoel x Bull-kans) + (Base-koersdoel x Base-kans) + (Bear-koersdoel x Bear-kans)
+Controleer dit zelf en vermeld de rekenkundige check in scenarioCheck.
+Pas kansen of koersdoelen aan totdat het gewogen gemiddelde exact overeenkomt met het eindkoersdoel (maximaal 0,50 euro afwijking).
+
 MARKTDATA:
-${JSON.stringify(kpiData, null, 2)}
+${dataStr}
 
 Geef je antwoord UITSLUITEND als een geldig JSON-object met exact deze structuur. Geen markdown, geen extra tekst:
 
@@ -36,7 +67,34 @@ Geef je antwoord UITSLUITEND als een geldig JSON-object met exact deze structuur
   "subtitel": "Neutrale ondertitel met aanbeveling en tijdshorizon (max 12 woorden)",
   "aanbeveling": "KOOP of HOUD of VERKOOP",
   "tijdshorizon": "12 maanden",
-  "koersdoelMethode": "Toelichting hoe consensus koersdoel tot stand komt: DCF, EV/EBITDA-multiple, P/E-peer-avg. Of 'Niet beschikbaar'.",
+
+  "koersdoelAfleiding": {
+    "dcf": {
+      "waardePerAandeel": "€X",
+      "gewicht": "X%",
+      "bijdrage": "€X"
+    },
+    "evEbitda": {
+      "sectorMultiple": "X.Xx",
+      "ebitda": "€Xmrd",
+      "enterpriseValue": "€Xmrd",
+      "minNettoschuld": "€Xmrd",
+      "equityValue": "€Xmrd",
+      "aandelenUitstaand": "Xmrd",
+      "waardePerAandeel": "€X",
+      "gewicht": "X%",
+      "bijdrage": "€X"
+    },
+    "pe": {
+      "sectorMultiple": "X.Xx",
+      "forwardEps": "€X",
+      "waardePerAandeel": "€X",
+      "gewicht": "X%",
+      "bijdrage": "€X"
+    },
+    "gewogenKoersdoel": "€X",
+    "rekencheck": "(€X x X%) + (€X x X%) + (€X x X%) = €X"
+  },
 
   "financieelOverzicht": {
     "jaren": ["FY2024A", "FY2025A", "FY2026E", "FY2027E"],
@@ -65,7 +123,13 @@ Geef je antwoord UITSLUITEND als een geldig JSON-object met exact deze structuur
       {"jaar": "FY2029E", "omzet": "€Xmrd", "ebitMarge": "X%", "fcf": "€Xmrd", "eps": "€X"},
       {"jaar": "FY2030E", "omzet": "€Xmrd", "ebitMarge": "X%", "fcf": "€Xmrd", "eps": "€X"}
     ],
-    "terminaleWaarde": "Terminale groeivoet X%, terminale FCF €Xmrd, TV = FCF × (1+g)/(WACC-g) = €Xmrd. Contante waarde TV = €Xmrd (X% van totale ondernemingswaarde).",
+    "terminaleWaarde": {
+      "groeivoetKeuze": "g = X%. Motivatie: nominale bbp-groei thuisland X%, sectorgroei langetermijn X%, positie bedrijf: marktleider/niche/cyclisch. Combinatie rechtvaardigt groeivoet van X%.",
+      "berekening": "TV = FCF_t+1 / (WACC - g) = €Xmrd / (X% - X%) = €Xmrd",
+      "contanteWaardeTv": "€Xmrd x kortingsfactor X = €Xmrd",
+      "aandeelInEv": "X%",
+      "bridgeEvNaarEquity": "EV €Xmrd - nettoschuld €Xmrd + kasoverschot €Xmrd = Equity Value €Xmrd / Xmrd aandelen = €X per aandeel"
+    },
     "gevoeligheid": {
       "wacc":  ["7%", "8%", "9%", "10%"],
       "groei": ["2%", "3%", "4%"],
@@ -80,31 +144,32 @@ Geef je antwoord UITSLUITEND als een geldig JSON-object met exact deze structuur
   "scenarios": [
     {
       "naam": "Bull",
-      "kans": "25%",
+      "kans": "X%",
       "kleur": "groen",
-      "aanname": "Concrete positieve aanname specifiek voor dit bedrijf (product, markt, event)",
-      "koersdoel": "€X of $X"
+      "aanname": "Concrete positieve aanname specifiek voor dit bedrijf",
+      "koersdoel": "€X"
     },
     {
       "naam": "Base",
-      "kans": "55%",
+      "kans": "X%",
       "kleur": "blauw",
-      "aanname": "Consensus prognoses — huidige groeiverwachtingen realiseren zich",
-      "koersdoel": "€X of $X"
+      "aanname": "Consensus prognoses realiseren zich",
+      "koersdoel": "€X"
     },
     {
       "naam": "Bear",
-      "kans": "20%",
+      "kans": "X%",
       "kleur": "rood",
-      "aanname": "Concrete negatieve aanname specifiek voor dit bedrijf (regulatoir, concurrentie, vraaguitval)",
-      "koersdoel": "€X of $X"
+      "aanname": "Concrete negatieve aanname specifiek voor dit bedrijf",
+      "koersdoel": "€X"
     }
   ],
+  "scenarioCheck": "Gewogen gemiddelde: (€X x X%) + (€X x X%) + (€X x X%) = €X, overeenkomst met koersdoel €X bevestigd.",
 
   "risicosKwantitatief": [
     {
       "naam": "Risico 1 (bedrijfsspecifiek)",
-      "omzetimpact": "€X–Xmrd of -X%",
+      "omzetimpact": "€X-Xmrd of -X%",
       "kans": "Hoog of Middel of Laag",
       "horizon": "12 mnd of 18 mnd of 24 mnd",
       "mitigatie": "Concrete mitigerende factor"
@@ -118,7 +183,7 @@ Geef je antwoord UITSLUITEND als een geldig JSON-object met exact deze structuur
     },
     {
       "naam": "Risico 3",
-      "omzetimpact": "€X–Xmrd",
+      "omzetimpact": "€X-Xmrd",
       "kans": "Laag",
       "horizon": "24 mnd",
       "mitigatie": "Mitigerende factor"
@@ -126,15 +191,17 @@ Geef je antwoord UITSLUITEND als een geldig JSON-object met exact deze structuur
   ],
 
   "peers": {
+    "selectieCriteria": "Peers geselecteerd op drie criteria: (a) business-mix, (b) EBIT-margestructuur binnen 5pp, (c) omzetgroei CAGR binnen 3pp. Peers die op slechts een criterium scoren zijn uitgesloten tenzij onderbouwd.",
     "directe": [
       {
-        "naam": "Directe Concurrent 1 (zelfde sector, vergelijkbare schaal)",
+        "naam": "Directe Concurrent 1",
         "ticker": "TICKER1",
         "forwardPE": "X.Xx",
         "evEbitda": "X.Xx",
         "pegRatio": "X.XX",
         "fcfYield": "X.X%",
         "nettomarge": "X.X%",
+        "criteriaScore": "Voldoet aan X/3 criteria: business-mix ja/nee, marge ja/nee, groei ja/nee",
         "relevantie": "Uitleg waarom dit WEL de juiste benchmark is"
       },
       {
@@ -145,6 +212,7 @@ Geef je antwoord UITSLUITEND als een geldig JSON-object met exact deze structuur
         "pegRatio": "X.XX",
         "fcfYield": "X.X%",
         "nettomarge": "X.X%",
+        "criteriaScore": "Voldoet aan X/3 criteria: business-mix ja/nee, marge ja/nee, groei ja/nee",
         "relevantie": "Uitleg"
       },
       {
@@ -155,12 +223,13 @@ Geef je antwoord UITSLUITEND als een geldig JSON-object met exact deze structuur
         "pegRatio": "X.XX",
         "fcfYield": "X.X%",
         "nettomarge": "X.X%",
+        "criteriaScore": "Voldoet aan X/3 criteria: business-mix ja/nee, marge ja/nee, groei ja/nee",
         "relevantie": "Uitleg"
       }
     ],
     "monopoliepremie": [
       {
-        "naam": "Monopolie-benchmark 1 (bijv. NVIDIA, MSFT, Hermès)",
+        "naam": "Monopolie-benchmark 1",
         "ticker": "TICKER",
         "pe": "X.Xx",
         "moat": "Type structurele moat (netwerk, IP, schaarste)",
@@ -176,7 +245,7 @@ Geef je antwoord UITSLUITEND als een geldig JSON-object met exact deze structuur
     ]
   },
 
-  "investmentThesis": "Twee à drie alinea's. Institutionele toon. Elk kwalitatief oordeel gevolgd door een getal. Sluit af met expliciete aanbeveling en tijdshorizon.",
+  "investmentThesis": "Twee a drie alineas. Institutionele toon. Elk kwalitatief oordeel gevolgd door een getal. Sluit af met expliciete aanbeveling en tijdshorizon.",
   "businessmodel": "Twee zinnen. Verdienmodel, geografische spreiding, marktaandeel. Bedrijfsspecifiek.",
 
   "swot": {
@@ -202,7 +271,7 @@ Geef je antwoord UITSLUITEND als een geldig JSON-object met exact deze structuur
     ]
   },
 
-  "waardering": "Vergelijk P/E of EV/EBITDA met (1) sectorgemiddelde, (2) historisch gemiddelde 5j indien bekend, (3) upside/downside t.o.v. huidige koers op basis van koersdoel. Conclusie in één zin.",
+  "waardering": "Vergelijk P/E of EV/EBITDA met (1) sectorgemiddelde, (2) historisch gemiddelde 5j indien bekend, (3) upside/downside tov huidige koers op basis van koersdoel. Conclusie in een zin.",
 
   "bronnen": [
     "Koers, market cap, omzet, marges, dividendrendement: Yahoo Finance (real-time)",
@@ -210,8 +279,7 @@ Geef je antwoord UITSLUITEND als een geldig JSON-object met exact deze structuur
     "Prognoses FY2026-2030: eigen model op basis van historische groei + sectortrends",
     "AI-tekstgeneratie en modelberekeningen: Google Gemini 2.0 Flash"
   ]
-}
-`;
+}`;
 
         const result = await model.generateContent(prompt);
         const responseText = result.response.text();
