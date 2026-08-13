@@ -604,43 +604,47 @@ function fmtBig(v) {
 
 /* ── PDF DOWNLOAD ─────────────────────────────────────────────────────── */
 function downloadPDF() {
-    const el     = document.getElementById('report-template');
+    const el = document.getElementById('report-template');
     const ticker = currentFinData?.ticker || 'REPORT';
 
-    // Zet het element tijdelijk op exact A4-breedte zodat html2canvas
-    // nooit buiten de pagina valt (794px = 210mm @ 96dpi).
+    // Sla oude inline-styles op
     const origShadow = el.style.boxShadow;
+    const origPosition = el.style.position;
+    
+    // Zorg dat het element exact op de oorsprong (0,0) staat voor html2canvas
     el.style.boxShadow = 'none';
 
     const opt = {
         margin:      0,
         filename:    `DeAnalist_${ticker}_${new Date().toISOString().slice(0,10)}.pdf`,
-        image:       { type: 'jpeg', quality: 0.97 },
+        image:       { type: 'jpeg', quality: 0.98 },
         html2canvas: {
-    scale: 2,
-    useCORS: true,
-    logging: false,
-    width: 794,
-    windowWidth: 794,
-    scrollX: 0,        // Voorkom horizontale scroll-offset
-    scrollY: 0,        // Voorkom verticale scroll-offset
-    x: 0,
-    y: 0
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            width: 794,
+            windowWidth: 794,
+            scrollX: 0,
+            scrollY: 0,
+            x: 0,
+            y: 0
         },
         jsPDF: {
             unit: 'mm',
             format: 'a4',
             orientation: 'portrait',
-            compress: true,
+            compress: true
         },
         pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
+
+    // Scroll bovenaan de pagina voor de zekerheid
+    window.scrollTo(0, 0);
 
     html2pdf().set(opt).from(el).save().then(() => {
         el.style.boxShadow = origShadow;
     });
 }
-
 /* ── OPSLAAN ALS PDF ──────────────────────────────────────────────────── */
 async function saveToDatabase() {
     if (!currentFinData || !currentAiData) return;
