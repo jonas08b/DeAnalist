@@ -617,11 +617,15 @@ function downloadPDF() {
         filename:    `DeAnalist_${ticker}_${new Date().toISOString().slice(0,10)}.pdf`,
         image:       { type: 'jpeg', quality: 0.97 },
         html2canvas: {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            width: 794,          // forceer A4-breedte
-            windowWidth: 794,    // idem voor viewport-units
+    scale: 2,
+    useCORS: true,
+    logging: false,
+    width: 794,
+    windowWidth: 794,
+    scrollX: 0,        // Voorkom horizontale scroll-offset
+    scrollY: 0,        // Voorkom verticale scroll-offset
+    x: 0,
+    y: 0
         },
         jsPDF: {
             unit: 'mm',
