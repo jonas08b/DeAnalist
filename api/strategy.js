@@ -1,10 +1,39 @@
 // /api/strategy.js — Vercel Serverless Function
-// Haalt live marktdata op + genereert AI-strategie analyse
+// Marktregime-analyse met dagelijkse server-side cache via Vercel Blob
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { put, head }          from '@vercel/blob';
 
-const YF_BASE = 'https://query1.finance.yahoo.com';
+const YF_BASE   = 'https://query1.finance.yahoo.com';
 const YF_BASE_2 = 'https://query2.finance.yahoo.com';
-const HEADERS = { 'User-Agent': 'Mozilla/5.0 (compatible; DeAnalist/1.0)' };
+const HEADERS   = { 'User-Agent': 'Mozilla/5.0 (compatible; DeAnalist/1.0)' };
+
+// Cache-bestand in Blob — één per dag, overschreven bij nieuwe dag
+function cacheKey() {
+    const d = new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
+    return `strategie-cache/regime-${d}.json`;
+}
+
+async function readCache(token) {
+    try {
+        const url = `https://${process.env.BLOB_STORE_ID}.public.blob.vercel-storage.com/${cacheKey()}`;
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        return await res.json();
+    } catch { return null; }
+}
+
+async function writeCache(data, token) {
+    try {
+        await put(cacheKey(), JSON.stringify(data), {
+            access: 'public',
+            token,
+            addRandomSuffix: false,
+            contentType: 'application/json',
+        });
+    } catch (e) {
+        console.warn('[strategy] Blob schrijven mislukt:', e.message);
+    }
+}
 
 async function fetchQuote(symbol) {
     for (const base of [YF_BASE, YF_BASE_2]) {
@@ -17,8 +46,8 @@ async function fetchQuote(symbol) {
             const data = await res.json();
             const meta = data?.chart?.result?.[0]?.meta;
             if (!meta) continue;
-            const price = meta.regularMarketPrice;
-            const prev  = meta.previousClose || meta.chartPreviousClose || price;
+            const price  = meta.regularMarketPrice;
+            const prev   = meta.previousClose || meta.chartPreviousClose || price;
             const chgPct = prev ? ((price - prev) / prev) * 100 : 0;
             return { symbol, price, prev, chgPct, name: meta.shortName || symbol };
         } catch { continue; }
@@ -28,18 +57,18 @@ async function fetchQuote(symbol) {
 
 async function fetchAllQuotes() {
     const symbols = {
-        sp500:  '^GSPC',
-        nasdaq: '^IXIC',
-        vix:    '^VIX',
+        sp500:    '^GSPC',
+        nasdaq:   '^IXIC',
+        vix:      '^VIX',
         yield10y: '^TNX',
         yield2y:  '^IRX',
-        dxy:    'DX-Y.NYB',
-        oil:    'CL=F',
-        gold:   'GC=F',
-        hyg:    'HYG',   // HY credit proxy
-        xlk:    'XLK',   // Tech sector
-        xlf:    'XLF',   // Financials
-        xle:    'XLE',   // Energy
+        dxy:      'DX-Y.NYB',
+        oil:      'CL=F',
+        gold:     'GC=F',
+        hyg:      'HYG',
+        xlk:      'XLK',
+        xlf:      'XLF',
+        xle:      'XLE',
     };
     const results = await Promise.all(
         Object.entries(symbols).map(async ([key, sym]) => [key, await fetchQuote(sym)])
@@ -52,14 +81,23 @@ export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     if (req.method === 'OPTIONS') return res.status(200).end();
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY ontbreekt.' });
+    const geminiKey = process.env.GEMINI_API_KEY;
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+
+    if (!geminiKey) return res.status(500).json({ error: 'GEMINI_API_KEY ontbreekt.' });
 
     try {
-        // 1. Live marktdata ophalen
+        // ── 1. Controleer Blob-cache ───────────────────────────────────────
+        if (blobToken) {
+            const cached = await readCache(blobToken);
+            if (cached) {
+                return res.status(200).json({ ...cached, _cached: true });
+            }
+        }
+
+        // ── 2. Verse marktdata ophalen ────────────────────────────────────
         const markt = await fetchAllQuotes();
 
-        // Bereken yield curve spread (10Y - 2Y, proxy)
         const yieldSpread = markt.yield10y && markt.yield2y
             ? (markt.yield10y.price - markt.yield2y.price).toFixed(2)
             : null;
@@ -70,9 +108,9 @@ export default async function handler(req, res) {
             yieldCurveSpread: yieldSpread ? `${yieldSpread}%` : 'N/B',
         }, null, 2);
 
-        // 2. Gemini analyse
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
+        // ── 3. Gemini analyse ─────────────────────────────────────────────
+        const genAI = new GoogleGenerativeAI(geminiKey);
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
         const prompt = `Je bent een senior macro-strateeg bij een institutioneel beleggingsresearchbureau — denk Gavekal, BCA Research.
 Schrijf UITSLUITEND in het NEDERLANDS. Toon: opiniërend, zelfverzekerd, institutioneel. Geen retail-taal.
@@ -124,18 +162,23 @@ Geef je antwoord UITSLUITEND als geldig JSON. Geen markdown, geen extra tekst:
 }`;
 
         const result = await model.generateContent(prompt);
-        const raw = result.response.text().replace(/```json|```/g, '').trim();
+        const raw    = result.response.text().replace(/```json|```/g, '').trim();
         const parsed = JSON.parse(raw);
 
-        // Vul marktdata aan met echte waarden (AI kan die soms afronden)
-        if (markt.sp500)   { parsed.marktdata.sp500   = { prijs: +markt.sp500.price.toFixed(2),   changePct: +markt.sp500.chgPct.toFixed(2) }; }
-        if (markt.nasdaq)  { parsed.marktdata.nasdaq  = { prijs: +markt.nasdaq.price.toFixed(2),  changePct: +markt.nasdaq.chgPct.toFixed(2) }; }
-        if (markt.vix)     { parsed.marktdata.vix     = { waarde: +markt.vix.price.toFixed(2),    changePct: +markt.vix.chgPct.toFixed(2) }; }
-        if (markt.yield10y){ parsed.marktdata.yield10y = { waarde: +markt.yield10y.price.toFixed(2), changePct: +markt.yield10y.chgPct.toFixed(2) }; }
-        if (markt.dxy)     { parsed.marktdata.dxy     = { waarde: +markt.dxy.price.toFixed(2),    changePct: +markt.dxy.chgPct.toFixed(2) }; }
-        if (markt.oil)     { parsed.marktdata.oil     = { waarde: +markt.oil.price.toFixed(2),    changePct: +markt.oil.chgPct.toFixed(2) }; }
+        // Overschrijf marktdata met echte waarden (AI rondt soms af)
+        if (markt.sp500)    { parsed.marktdata.sp500    = { prijs: +markt.sp500.price.toFixed(2),    changePct: +markt.sp500.chgPct.toFixed(2) }; }
+        if (markt.nasdaq)   { parsed.marktdata.nasdaq   = { prijs: +markt.nasdaq.price.toFixed(2),   changePct: +markt.nasdaq.chgPct.toFixed(2) }; }
+        if (markt.vix)      { parsed.marktdata.vix      = { waarde: +markt.vix.price.toFixed(2),     changePct: +markt.vix.chgPct.toFixed(2) }; }
+        if (markt.yield10y) { parsed.marktdata.yield10y = { waarde: +markt.yield10y.price.toFixed(2), changePct: +markt.yield10y.chgPct.toFixed(2) }; }
+        if (markt.dxy)      { parsed.marktdata.dxy      = { waarde: +markt.dxy.price.toFixed(2),     changePct: +markt.dxy.chgPct.toFixed(2) }; }
+        if (markt.oil)      { parsed.marktdata.oil      = { waarde: +markt.oil.price.toFixed(2),     changePct: +markt.oil.chgPct.toFixed(2) }; }
 
-        return res.status(200).json(parsed);
+        // ── 4. Sla op in Blob ─────────────────────────────────────────────
+        if (blobToken) {
+            await writeCache(parsed, blobToken);
+        }
+
+        return res.status(200).json({ ...parsed, _cached: false });
 
     } catch (err) {
         console.error('[strategy]', err);
