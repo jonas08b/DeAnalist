@@ -6,6 +6,7 @@
     <meta name="format-detection" content="telephone=no">
     <title>DeAnalist — Institutional Equity Research</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&display=swap');
@@ -1094,7 +1095,13 @@ document.getElementById('search-form').addEventListener('submit', async (e) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ kpiData: finData })
         });
-        const aiData = await aiRes.json();
+        const aiText = await aiRes.text();
+        let aiData;
+        try {
+            aiData = JSON.parse(aiText);
+        } catch {
+            throw new Error(`AI-endpoint retourneerde geen JSON (mogelijk timeout). Status: ${aiRes.status}`);
+        }
         if (!aiRes.ok) throw new Error(aiData.error || 'Fout bij genereren AI-analyse.');
 
         currentFinData = finData;
