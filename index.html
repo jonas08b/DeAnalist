@@ -679,7 +679,11 @@ function renderReport(fin, ai) {
     } else {
         document.getElementById('pdf-upside').textContent = 'N/B';
     }
-    document.getElementById('pdf-koersdoel-methode').textContent = ai.koersdoelMethode || 'Niet beschikbaar';
+    const afl = ai.koersdoelAfleiding;
+    const methodeStr = afl
+        ? `DCF ${afl.dcf?.gewicht ?? '—'} → ${afl.dcf?.bijdrage ?? '—'} · EV/EBITDA ${afl.evEbitda?.gewicht ?? '—'} → ${afl.evEbitda?.bijdrage ?? '—'} · P/E ${afl.pe?.gewicht ?? '—'} → ${afl.pe?.bijdrage ?? '—'} · Gewogen koersdoel: ${afl.gewogenKoersdoel ?? '—'} (${afl.rekencheck ?? ''})`
+        : 'Niet beschikbaar';
+    document.getElementById('pdf-koersdoel-methode').textContent = methodeStr;
 
     document.getElementById('kpi-koers').textContent = koers ? fmt(koers)  : String(fin.koers);
     document.getElementById('kpi-doel').textContent  = doel  ? fmt(doel)   : String(fin.koersdoel);
