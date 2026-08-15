@@ -685,7 +685,8 @@
                     </div>
                 </div>
 
-                <!-- ⑧ DCF TABEL -->
+                <!-- ⑧ DCF TABEL — PAGE 2 START -->
+                <div id="page-break-dcf" style="page-break-before:always;height:0;"></div>
                 <div style="margin-bottom:10px;" class="no-break">
                     <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:6px;">DCF-Model — Prognoses FY2026E–FY2030E</div>
                     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:7px 10px;margin-bottom:6px;display:flex;gap:20px;flex-wrap:wrap;" class="no-break">
@@ -1113,8 +1114,14 @@ document.getElementById('search-form').addEventListener('submit', async (e) => {
 
 /* ── RENDER ──────────────────────────────────────────────────────────── */
 function renderReport(fin, ai) {
-    const koers = typeof fin.koers    === 'number' ? fin.koers    : null;
-    const doel  = typeof fin.koersdoel === 'number' ? fin.koersdoel : null;
+    const koers = typeof fin.koers === 'number' ? fin.koers : null;
+
+    // Prioriteit: AI gewogen koersdoel (eigen DCF/EV/PE model) > Yahoo consensus
+    // Yahoo targetMeanPrice = analistengemiddelde, AI target = intern model — nooit 1:1 aligned
+    const aiDoelStr = ai.koersdoelAfleiding?.gewogenKoersdoel || '';
+    const aiDoelNum = parseFloat(aiDoelStr.replace(/[^0-9.,]/g, '').replace(',', '.')) || null;
+    const yahooDoelNum = typeof fin.koersdoel === 'number' ? fin.koersdoel : null;
+    const doel = aiDoelNum || yahooDoelNum; // AI-model is primaire bron
 
     document.getElementById('pdf-title').textContent = `${fin.bedrijfsNaam} (${fin.ticker})`;
     document.getElementById('pdf-subtitle').textContent = ai.subtitel || '';
@@ -1135,7 +1142,12 @@ function renderReport(fin, ai) {
     } else {
         document.getElementById('pdf-upside').textContent = 'N/B';
     }
-    document.getElementById('pdf-koersdoel-methode').textContent = ai.koersdoelMethode || 'Niet beschikbaar';
+    // Methodology: bouw leesbaar uit koersdoelAfleiding (object, niet string)
+    const kda = ai.koersdoelAfleiding || {};
+    const methodeStr = kda.gewogenKoersdoel
+        ? `Gewogen koersdoel ${kda.gewogenKoersdoel} · DCF ${kda.dcf?.bijdrage || '—'} (${kda.dcf?.gewicht || '—'}) · EV/EBITDA ${kda.evEbitda?.bijdrage || '—'} (${kda.evEbitda?.gewicht || '—'}) · P/E ${kda.pe?.bijdrage || '—'} (${kda.pe?.gewicht || '—'}) · Check: ${kda.rekencheck || '—'}`
+        : (ai.koersdoelMethode || 'Niet beschikbaar');
+    document.getElementById('pdf-koersdoel-methode').textContent = methodeStr;
 
     document.getElementById('kpi-koers').textContent = koers ? fmt(koers)  : String(fin.koers);
     document.getElementById('kpi-doel').textContent  = doel  ? fmt(doel)   : String(fin.koersdoel);
@@ -1190,7 +1202,18 @@ function renderReport(fin, ai) {
     document.getElementById('wacc-erp').textContent  = wacc.marktpremie  || '—';
     document.getElementById('wacc-debt').textContent = wacc.schuldenPremie || '—';
     document.getElementById('wacc-total').textContent = wacc.totaalWacc  || '—';
-    document.getElementById('dcf-tv').textContent    = dcf.terminaleWaarde || '—';
+    // terminaleWaarde is een object — flatten naar leesbare string
+    const tv = dcf.terminaleWaarde;
+    const tvStr = tv && typeof tv === 'object'
+        ? [
+            tv.groeivoetKeuze   ? `Groeivoet: ${tv.groeivoetKeuze}` : '',
+            tv.berekening       ? `Berekening: ${tv.berekening}` : '',
+            tv.contanteWaardeTv ? `Contante waarde TV: ${tv.contanteWaardeTv}` : '',
+            tv.aandeelInEv      ? `Aandeel in EV: ${tv.aandeelInEv}` : '',
+            tv.bridgeEvNaarEquity ? `Bridge EV→Equity: ${tv.bridgeEvNaarEquity}` : '',
+          ].filter(Boolean).join(' · ')
+        : (tv || '—');
+    document.getElementById('dcf-tv').textContent = tvStr;
 
     const dcfRows = [
         { label: 'Omzet',       key: 'omzet'     },
@@ -1303,21 +1326,40 @@ function fmtBig(v) {
 }
 
 /* ── PDF DOWNLOAD ─────────────────────────────────────────────────────── */
+function addPageNumbers(pdf) {
+    const total = pdf.internal.getNumberOfPages();
+    const pw = pdf.internal.pageSize.getWidth();
+    const ph = pdf.internal.pageSize.getHeight();
+    pdf.setFontSize(7);
+    pdf.setTextColor(148, 163, 184); // slate-400
+    for (let i = 1; i <= total; i++) {
+        pdf.setPage(i);
+        // Paginanummer rechtsonder
+        pdf.text(`Pagina ${i} / ${total}`, pw - 14, ph - 5, { align: 'right' });
+        // "De Analist" linksonder
+        pdf.text('De Analist · Equity Research Division', 14, ph - 5);
+    }
+}
+
 function downloadPDF() {
     const el = document.getElementById('report-template');
     const ticker = currentFinData?.ticker || 'REPORT';
     const origShadow = el.style.boxShadow;
     el.style.boxShadow = 'none';
     const opt = {
-        margin:      0,
+        margin:      [8, 8, 12, 8], // bottom-margin voor paginanummer
         filename:    `DeAnalist_${ticker}_${new Date().toISOString().slice(0,10)}.pdf`,
         image:       { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false, width: 794, windowWidth: 794, scrollX: 0, scrollY: 0, x: 0, y: 0 },
+        html2canvas: { scale: 2, useCORS: true, logging: false, width: 778, windowWidth: 778, scrollX: 0, scrollY: 0, x: 0, y: 0 },
         jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-        pagebreak:   { mode: ['avoid-all', 'css', 'legacy'] }
+        pagebreak:   { mode: ['css', 'legacy'], before: ['#page-break-dcf'] }
     };
     window.scrollTo(0, 0);
-    html2pdf().set(opt).from(el).save().then(() => { el.style.boxShadow = origShadow; });
+    html2pdf().set(opt).from(el).toPdf().get('pdf').then(pdf => {
+        addPageNumbers(pdf);
+        pdf.save(opt.filename);
+        el.style.boxShadow = origShadow;
+    });
 }
 
 /* ── OPSLAAN ─────────────────────────────────────────────────────────── */
@@ -1329,14 +1371,16 @@ async function saveToDatabase() {
     if (saveBtn) saveBtn.innerText = '⏳ Bezig met opslaan…';
     try {
         const opt = {
-            margin: 0,
+            margin: [8, 8, 12, 8],
             filename: `DeAnalist_${ticker}_${new Date().toISOString().slice(0,10)}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, logging: false, width: 794, windowWidth: 794, scrollX: 0, scrollY: 0, x: 0, y: 0 },
+            html2canvas: { scale: 2, useCORS: true, logging: false, width: 778, windowWidth: 778, scrollX: 0, scrollY: 0, x: 0, y: 0 },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            pagebreak: { mode: ['css', 'legacy'] }
         };
-        const pdf = await html2pdf().set(opt).from(el).outputPdf('datauristring');
+        const pdfObj = await html2pdf().set(opt).from(el).toPdf().get('pdf');
+        addPageNumbers(pdfObj);
+        const pdf = pdfObj.output('datauristring');
         if (!pdf) throw new Error('PDF kon niet worden gegenereerd.');
         const base64Data = pdf.split(',')[1];
         const response = await fetch('/api/reports', {
