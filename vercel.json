@@ -7,6 +7,7 @@
     "api/financials.js": { "maxDuration": 15 },
     "api/peers.js":      { "maxDuration": 15 },
     "api/ai.js":         { "maxDuration": 60 },
+    "api/strategy.js":   { "maxDuration": 60 },
     "api/reports.js":    { "maxDuration": 15 }
   },
   "headers": [
