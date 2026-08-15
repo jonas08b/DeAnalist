@@ -271,13 +271,25 @@ Geef je antwoord UITSLUITEND als een geldig JSON-object met exact deze structuur
     ]
   },
 
-  "waardering": "Vergelijk P/E of EV/EBITDA met (1) sectorgemiddelde, (2) historisch gemiddelde 5j indien bekend, (3) upside/downside tov huidige koers op basis van koersdoel. Conclusie in een zin.",
+  "katalysatoren": [
+    "Concrete upside-katalysator 1 met tijdshorizon en potentieel koerseffect",
+    "Concrete upside-katalysator 2",
+    "Concrete upside-katalysator 3"
+  ],
+
+  "risicos": [
+    "Concreet neerwaarts risico 1 met kwantificering",
+    "Concreet neerwaarts risico 2",
+    "Concreet neerwaarts risico 3"
+  ],
+
+  "waardering": "Vergelijk P/E of EV/EBITDA met (1) sectorgemiddelde, (2) historisch gemiddelde 5j indien bekend, (3) upside/downside tov huidige koers op basis van koersdoel. Vermeld ook in één zin waarom ons intern koersdoel (uit koersdoelAfleiding.gewogenKoersdoel) kan afwijken van externe analistenconsensus. Conclusie in een zin.",
 
   "bronnen": [
     "Koers, market cap, omzet, marges, dividendrendement: Yahoo Finance (real-time)",
-    "Consensus koersdoel, peers data: Financial Modeling Prep (analistengemiddelde)",
+    "Consensus koersdoel referentie: Financial Modeling Prep (analistengemiddelde)",
     "Prognoses FY2026-2030: eigen model op basis van historische groei + sectortrends",
-    "AI-tekstgeneratie en modelberekeningen: Google Gemini 2.0 Flash"
+    "AI-tekstgeneratie en modelberekeningen: Google Gemini 3.5 Flash"
   ]
 }`;
 
