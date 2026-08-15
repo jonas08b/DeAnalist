@@ -685,8 +685,7 @@
                     </div>
                 </div>
 
-                <!-- ⑧ DCF TABEL — PAGE 2 START -->
-                <div id="page-break-dcf" style="page-break-before:always;height:0;"></div>
+                <!-- ⑧ DCF TABEL -->
                 <div style="margin-bottom:10px;" class="no-break">
                     <div style="font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:6px;">DCF-Model — Prognoses FY2026E–FY2030E</div>
                     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:7px 10px;margin-bottom:6px;display:flex;gap:20px;flex-wrap:wrap;" class="no-break">
@@ -1345,20 +1344,26 @@ function downloadPDF() {
     const el = document.getElementById('report-template');
     const ticker = currentFinData?.ticker || 'REPORT';
     const origShadow = el.style.boxShadow;
+    const origZoom   = el.style.zoom;
+
+    // Schaal naar ~65% zodat alle content op 2 A4-pagina's past
     el.style.boxShadow = 'none';
+    el.style.zoom = '0.65';
+
     const opt = {
-        margin:      [8, 8, 12, 8], // bottom-margin voor paginanummer
+        margin:      [6, 6, 10, 6],
         filename:    `DeAnalist_${ticker}_${new Date().toISOString().slice(0,10)}.pdf`,
         image:       { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false, width: 778, windowWidth: 778, scrollX: 0, scrollY: 0, x: 0, y: 0 },
+        html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
         jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-        pagebreak:   { mode: ['css', 'legacy'], before: ['#page-break-dcf'] }
+        pagebreak:   { mode: ['avoid-all'] }
     };
     window.scrollTo(0, 0);
     html2pdf().set(opt).from(el).toPdf().get('pdf').then(pdf => {
         addPageNumbers(pdf);
         pdf.save(opt.filename);
         el.style.boxShadow = origShadow;
+        el.style.zoom = origZoom;
     });
 }
 
@@ -1370,16 +1375,18 @@ async function saveToDatabase() {
     const saveBtn = document.getElementById('save-db-btn');
     if (saveBtn) saveBtn.innerText = '⏳ Bezig met opslaan…';
     try {
+        el.style.zoom = '0.65';
         const opt = {
-            margin: [8, 8, 12, 8],
+            margin: [6, 6, 10, 6],
             filename: `DeAnalist_${ticker}_${new Date().toISOString().slice(0,10)}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, logging: false, width: 778, windowWidth: 778, scrollX: 0, scrollY: 0, x: 0, y: 0 },
+            html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-            pagebreak: { mode: ['css', 'legacy'] }
+            pagebreak: { mode: ['avoid-all'] }
         };
         const pdfObj = await html2pdf().set(opt).from(el).toPdf().get('pdf');
         addPageNumbers(pdfObj);
+        el.style.zoom = '';
         const pdf = pdfObj.output('datauristring');
         if (!pdf) throw new Error('PDF kon niet worden gegenereerd.');
         const base64Data = pdf.split(',')[1];
