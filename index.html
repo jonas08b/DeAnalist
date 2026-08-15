@@ -1325,46 +1325,73 @@ function fmtBig(v) {
 }
 
 /* ── PDF DOWNLOAD ─────────────────────────────────────────────────────── */
-function addPageNumbers(pdf) {
-    const total = pdf.internal.getNumberOfPages();
-    const pw = pdf.internal.pageSize.getWidth();
-    const ph = pdf.internal.pageSize.getHeight();
-    pdf.setFontSize(7);
-    pdf.setTextColor(148, 163, 184); // slate-400
-    for (let i = 1; i <= total; i++) {
-        pdf.setPage(i);
-        // Paginanummer rechtsonder
-        pdf.text(`Pagina ${i} / ${total}`, pw - 14, ph - 5, { align: 'right' });
-        // "De Analist" linksonder
-        pdf.text('De Analist · Equity Research Division', 14, ph - 5);
+/* ── CANVAS-SPLIT PDF — rendeert als één afbeelding, deelt over 2 A4's ── */
+async function buildPdfFromCanvas(el) {
+    // 1. Render de volledige HTML als één canvas — geen zoom, geen schaal-trucjes
+    const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        scrollX: 0,
+        scrollY: 0,
+        backgroundColor: '#ffffff'
+    });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+    // 2. A4-afmetingen in mm
+    const pdfW  = 210;
+    const pdfH  = 297;
+    const mX    = 8;   // horizontale marge
+    const mTop  = 8;   // bovenmarge
+    const mBot  = 10;  // ondermarge (ruimte voor paginanummer)
+
+    const usableW  = pdfW - mX * 2;
+    const usableH  = pdfH - mTop - mBot;
+
+    // 3. Schaal canvas-breedte naar A4 breedte (in mm)
+    const mmPerPx  = usableW / canvas.width;
+    const totalH   = canvas.height * mmPerPx;  // totale hoogte van de afbeelding in mm
+
+    // 4. Verdeeld over exact 2 pagina's
+    const sliceH   = totalH / 2;               // mm per pagina
+
+    // 5. Bouw jsPDF — beschikbaar via html2pdf-bundle
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+
+    for (let p = 0; p < 2; p++) {
+        if (p > 0) pdf.addPage();
+        // Verschuif de afbeelding zodat het juiste segment zichtbaar is
+        // jsPDF clipt automatisch wat buiten de pagina valt
+        const yPos = mTop - p * sliceH;
+        pdf.addImage(imgData, 'JPEG', mX, yPos, usableW, totalH);
     }
+
+    // 6. Paginanummers
+    pdf.setFontSize(7);
+    pdf.setTextColor(148, 163, 184);
+    for (let i = 1; i <= 2; i++) {
+        pdf.setPage(i);
+        pdf.text('De Analist · Equity Research Division', mX, pdfH - 4);
+        pdf.text(`Pagina ${i} / 2`, pdfW - mX, pdfH - 4, { align: 'right' });
+    }
+
+    return pdf;
 }
 
-function downloadPDF() {
+async function downloadPDF() {
     const el = document.getElementById('report-template');
     const ticker = currentFinData?.ticker || 'REPORT';
     const origShadow = el.style.boxShadow;
-    const origZoom   = el.style.zoom;
-
-    // Schaal naar ~65% zodat alle content op 2 A4-pagina's past
     el.style.boxShadow = 'none';
-    el.style.zoom = '0.65';
-
-    const opt = {
-        margin:      [6, 6, 10, 6],
-        filename:    `DeAnalist_${ticker}_${new Date().toISOString().slice(0,10)}.pdf`,
-        image:       { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
-        jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-        pagebreak:   { mode: ['avoid-all'] }
-    };
     window.scrollTo(0, 0);
-    html2pdf().set(opt).from(el).toPdf().get('pdf').then(pdf => {
-        addPageNumbers(pdf);
-        pdf.save(opt.filename);
+    try {
+        const pdf = await buildPdfFromCanvas(el);
+        pdf.save(`DeAnalist_${ticker}_${new Date().toISOString().slice(0,10)}.pdf`);
+    } finally {
         el.style.boxShadow = origShadow;
-        el.style.zoom = origZoom;
-    });
+    }
 }
 
 /* ── OPSLAAN ─────────────────────────────────────────────────────────── */
@@ -1375,18 +1402,7 @@ async function saveToDatabase() {
     const saveBtn = document.getElementById('save-db-btn');
     if (saveBtn) saveBtn.innerText = '⏳ Bezig met opslaan…';
     try {
-        el.style.zoom = '0.65';
-        const opt = {
-            margin: [6, 6, 10, 6],
-            filename: `DeAnalist_${ticker}_${new Date().toISOString().slice(0,10)}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-            pagebreak: { mode: ['avoid-all'] }
-        };
-        const pdfObj = await html2pdf().set(opt).from(el).toPdf().get('pdf');
-        addPageNumbers(pdfObj);
-        el.style.zoom = '';
+        const pdfObj = await buildPdfFromCanvas(el);
         const pdf = pdfObj.output('datauristring');
         if (!pdf) throw new Error('PDF kon niet worden gegenereerd.');
         const base64Data = pdf.split(',')[1];
