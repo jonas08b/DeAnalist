@@ -6,7 +6,6 @@
     <meta name="format-detection" content="telephone=no">
     <title>DeAnalist — Institutional Equity Research</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&display=swap');
@@ -1095,13 +1094,7 @@ document.getElementById('search-form').addEventListener('submit', async (e) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ kpiData: finData })
         });
-        const aiText = await aiRes.text();
-        let aiData;
-        try {
-            aiData = JSON.parse(aiText);
-        } catch {
-            throw new Error(`AI-endpoint retourneerde geen JSON (mogelijk timeout). Status: ${aiRes.status}`);
-        }
+        const aiData = await aiRes.json();
         if (!aiRes.ok) throw new Error(aiData.error || 'Fout bij genereren AI-analyse.');
 
         currentFinData = finData;
@@ -1120,14 +1113,8 @@ document.getElementById('search-form').addEventListener('submit', async (e) => {
 
 /* ── RENDER ──────────────────────────────────────────────────────────── */
 function renderReport(fin, ai) {
-    const koers = typeof fin.koers === 'number' ? fin.koers : null;
-
-    // Prioriteit: AI gewogen koersdoel (eigen DCF/EV/PE model) > Yahoo consensus
-    // Yahoo targetMeanPrice = analistengemiddelde, AI target = intern model — nooit 1:1 aligned
-    const aiDoelStr = ai.koersdoelAfleiding?.gewogenKoersdoel || '';
-    const aiDoelNum = parseFloat(aiDoelStr.replace(/[^0-9.,]/g, '').replace(',', '.')) || null;
-    const yahooDoelNum = typeof fin.koersdoel === 'number' ? fin.koersdoel : null;
-    const doel = aiDoelNum || yahooDoelNum; // AI-model is primaire bron
+    const koers = typeof fin.koers    === 'number' ? fin.koers    : null;
+    const doel  = typeof fin.koersdoel === 'number' ? fin.koersdoel : null;
 
     document.getElementById('pdf-title').textContent = `${fin.bedrijfsNaam} (${fin.ticker})`;
     document.getElementById('pdf-subtitle').textContent = ai.subtitel || '';
@@ -1148,12 +1135,7 @@ function renderReport(fin, ai) {
     } else {
         document.getElementById('pdf-upside').textContent = 'N/B';
     }
-    // Methodology: bouw leesbaar uit koersdoelAfleiding (object, niet string)
-    const kda = ai.koersdoelAfleiding || {};
-    const methodeStr = kda.gewogenKoersdoel
-        ? `Gewogen koersdoel ${kda.gewogenKoersdoel} · DCF ${kda.dcf?.bijdrage || '—'} (${kda.dcf?.gewicht || '—'}) · EV/EBITDA ${kda.evEbitda?.bijdrage || '—'} (${kda.evEbitda?.gewicht || '—'}) · P/E ${kda.pe?.bijdrage || '—'} (${kda.pe?.gewicht || '—'}) · Check: ${kda.rekencheck || '—'}`
-        : (ai.koersdoelMethode || 'Niet beschikbaar');
-    document.getElementById('pdf-koersdoel-methode').textContent = methodeStr;
+    document.getElementById('pdf-koersdoel-methode').textContent = ai.koersdoelMethode || 'Niet beschikbaar';
 
     document.getElementById('kpi-koers').textContent = koers ? fmt(koers)  : String(fin.koers);
     document.getElementById('kpi-doel').textContent  = doel  ? fmt(doel)   : String(fin.koersdoel);
@@ -1208,18 +1190,7 @@ function renderReport(fin, ai) {
     document.getElementById('wacc-erp').textContent  = wacc.marktpremie  || '—';
     document.getElementById('wacc-debt').textContent = wacc.schuldenPremie || '—';
     document.getElementById('wacc-total').textContent = wacc.totaalWacc  || '—';
-    // terminaleWaarde is een object — flatten naar leesbare string
-    const tv = dcf.terminaleWaarde;
-    const tvStr = tv && typeof tv === 'object'
-        ? [
-            tv.groeivoetKeuze   ? `Groeivoet: ${tv.groeivoetKeuze}` : '',
-            tv.berekening       ? `Berekening: ${tv.berekening}` : '',
-            tv.contanteWaardeTv ? `Contante waarde TV: ${tv.contanteWaardeTv}` : '',
-            tv.aandeelInEv      ? `Aandeel in EV: ${tv.aandeelInEv}` : '',
-            tv.bridgeEvNaarEquity ? `Bridge EV→Equity: ${tv.bridgeEvNaarEquity}` : '',
-          ].filter(Boolean).join(' · ')
-        : (tv || '—');
-    document.getElementById('dcf-tv').textContent = tvStr;
+    document.getElementById('dcf-tv').textContent    = dcf.terminaleWaarde || '—';
 
     const dcfRows = [
         { label: 'Omzet',       key: 'omzet'     },
@@ -1332,73 +1303,21 @@ function fmtBig(v) {
 }
 
 /* ── PDF DOWNLOAD ─────────────────────────────────────────────────────── */
-/* ── CANVAS-SPLIT PDF — rendeert als één afbeelding, deelt over 2 A4's ── */
-async function buildPdfFromCanvas(el) {
-    // 1. Render de volledige HTML als één canvas — geen zoom, geen schaal-trucjes
-    const canvas = await html2canvas(el, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        scrollX: 0,
-        scrollY: 0,
-        backgroundColor: '#ffffff'
-    });
-
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-
-    // 2. A4-afmetingen in mm
-    const pdfW  = 210;
-    const pdfH  = 297;
-    const mX    = 8;   // horizontale marge
-    const mTop  = 8;   // bovenmarge
-    const mBot  = 10;  // ondermarge (ruimte voor paginanummer)
-
-    const usableW  = pdfW - mX * 2;
-    const usableH  = pdfH - mTop - mBot;
-
-    // 3. Schaal canvas-breedte naar A4 breedte (in mm)
-    const mmPerPx  = usableW / canvas.width;
-    const totalH   = canvas.height * mmPerPx;  // totale hoogte van de afbeelding in mm
-
-    // 4. Verdeeld over exact 2 pagina's
-    const sliceH   = totalH / 2;               // mm per pagina
-
-    // 5. Bouw jsPDF — beschikbaar via html2pdf-bundle
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
-
-    for (let p = 0; p < 2; p++) {
-        if (p > 0) pdf.addPage();
-        // Verschuif de afbeelding zodat het juiste segment zichtbaar is
-        // jsPDF clipt automatisch wat buiten de pagina valt
-        const yPos = mTop - p * sliceH;
-        pdf.addImage(imgData, 'JPEG', mX, yPos, usableW, totalH);
-    }
-
-    // 6. Paginanummers
-    pdf.setFontSize(7);
-    pdf.setTextColor(148, 163, 184);
-    for (let i = 1; i <= 2; i++) {
-        pdf.setPage(i);
-        pdf.text('De Analist · Equity Research Division', mX, pdfH - 4);
-        pdf.text(`Pagina ${i} / 2`, pdfW - mX, pdfH - 4, { align: 'right' });
-    }
-
-    return pdf;
-}
-
-async function downloadPDF() {
+function downloadPDF() {
     const el = document.getElementById('report-template');
     const ticker = currentFinData?.ticker || 'REPORT';
     const origShadow = el.style.boxShadow;
     el.style.boxShadow = 'none';
+    const opt = {
+        margin:      0,
+        filename:    `DeAnalist_${ticker}_${new Date().toISOString().slice(0,10)}.pdf`,
+        image:       { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false, width: 794, windowWidth: 794, scrollX: 0, scrollY: 0, x: 0, y: 0 },
+        jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+        pagebreak:   { mode: ['avoid-all', 'css', 'legacy'] }
+    };
     window.scrollTo(0, 0);
-    try {
-        const pdf = await buildPdfFromCanvas(el);
-        pdf.save(`DeAnalist_${ticker}_${new Date().toISOString().slice(0,10)}.pdf`);
-    } finally {
-        el.style.boxShadow = origShadow;
-    }
+    html2pdf().set(opt).from(el).save().then(() => { el.style.boxShadow = origShadow; });
 }
 
 /* ── OPSLAAN ─────────────────────────────────────────────────────────── */
@@ -1409,8 +1328,15 @@ async function saveToDatabase() {
     const saveBtn = document.getElementById('save-db-btn');
     if (saveBtn) saveBtn.innerText = '⏳ Bezig met opslaan…';
     try {
-        const pdfObj = await buildPdfFromCanvas(el);
-        const pdf = pdfObj.output('datauristring');
+        const opt = {
+            margin: 0,
+            filename: `DeAnalist_${ticker}_${new Date().toISOString().slice(0,10)}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, logging: false, width: 794, windowWidth: 794, scrollX: 0, scrollY: 0, x: 0, y: 0 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        };
+        const pdf = await html2pdf().set(opt).from(el).outputPdf('datauristring');
         if (!pdf) throw new Error('PDF kon niet worden gegenereerd.');
         const base64Data = pdf.split(',')[1];
         const response = await fetch('/api/reports', {
