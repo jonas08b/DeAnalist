@@ -272,6 +272,18 @@
         #report-template table,
         #report-template .no-break {
             page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        /* ── PDF PAGINANUMMERING ── */
+        @media print {
+            @page {
+                margin: 0;
+                size: A4 portrait;
+            }
+        }
+        .pdf-page-footer {
+            display: none; /* verborgen in browser, zichtbaar in gegenereerde PDF via JS */
         }
 
         /* Aanbevelingsbadges */
@@ -616,9 +628,13 @@
                 </div>
 
                 <!-- ③ KOERSDOEL METHODOLOGIE -->
-                <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:7px 10px;margin-bottom:10px;" class="no-break">
-                    <span style="font-size:7px;font-weight:700;text-transform:uppercase;color:#1e40af;letter-spacing:1px;">Koersdoel Methodologie · </span>
-                    <span id="pdf-koersdoel-methode" style="font-size:9.5px;color:#1e3a8a;"></span>
+                <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:8px 10px;margin-bottom:10px;" class="no-break">
+                    <div style="font-size:7px;font-weight:700;text-transform:uppercase;color:#1e40af;letter-spacing:1px;margin-bottom:4px;">Koersdoel Methodologie</div>
+                    <div id="pdf-koersdoel-methode" style="font-size:8.5px;color:#1e3a8a;line-height:1.6;"></div>
+                    <div id="pdf-koersdoel-rekencheck" style="font-size:7.5px;color:#1e40af;margin-top:4px;font-style:italic;"></div>
+                    <div id="pdf-koersdoel-yahoo-noot" style="font-size:7px;color:#64748b;margin-top:3px;display:none;">
+                        ¹ Yahoo Finance analistengemiddelde wijkt af — zie toelichting in waarderingsparagraaf.
+                    </div>
                 </div>
 
                 <!-- ④ FINANCIEEL OVERZICHT -->
@@ -797,7 +813,10 @@
                     <div id="pdf-bronnen" style="font-size:8.5px;color:#64748b;line-height:1.6;white-space:pre-line;"></div>
                 </div>
 
-                <!-- ⑮ DISCLAIMER -->
+                <!-- ⑮ PAGINANUMMER (wordt gevuld door downloadPDF) -->
+                <div id="pdf-page-numbers"></div>
+
+                <!-- ⑯ DISCLAIMER -->
                 <div style="font-size:7.5px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:7px;text-align:justify;line-height:1.5;">
                     <strong>De Analist · Equity Research Division </strong> · Databronnen: Yahoo Finance (koers, market cap, omzet, marges, dividend),
                     Financial Modeling Prep (consensus koersdoelen, peer-data), Google Gemini 2.0 Flash (AI-generatie, DCF-model, prognoses).
@@ -1126,19 +1145,69 @@ function renderReport(fin, ai) {
     badge.style.cssText = 'font-size:8px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:1px;text-transform:uppercase;';
 
     document.getElementById('pdf-horizon').textContent = ai.tijdshorizon ? `· ${ai.tijdshorizon}` : '';
-    document.getElementById('pdf-koersdoel-header').textContent = doel ? fmt(doel) : 'N/B';
-    if (koers && doel) {
-        const upside = (((doel - koers) / koers) * 100).toFixed(1);
+    // ── Koersdoel: gebruik AI-koersdoel als leidend (DCF/EV/PE gewogen gemiddelde)
+    // fin.koersdoel = Yahoo Finance analistengemiddelde (externe bron, kan afwijken)
+    // ai.koersdoelAfleiding.gewogenKoersdoel = intern berekend AI-koersdoel (leidend)
+    const aiKoersdoelStr = ai.koersdoelAfleiding?.gewogenKoersdoel || null;
+    // Parseer AI-koersdoel: verwijder €/$, komma's → float
+    const aiKoersdoelNum = aiKoersdoelStr
+        ? parseFloat(String(aiKoersdoelStr).replace(/[€$,\s]/g, '').replace(',', '.'))
+        : null;
+    const leidendDoel = (aiKoersdoelNum && !isNaN(aiKoersdoelNum)) ? aiKoersdoelNum : doel;
+
+    document.getElementById('pdf-koersdoel-header').textContent = leidendDoel ? fmt(leidendDoel) : 'N/B';
+    if (koers && leidendDoel) {
+        const upside = (((leidendDoel - koers) / koers) * 100).toFixed(1);
         const el = document.getElementById('pdf-upside');
         el.textContent = `${upside > 0 ? '+' : ''}${upside}%`;
         el.style.color = upside > 0 ? '#166534' : '#991b1b';
     } else {
         document.getElementById('pdf-upside').textContent = 'N/B';
     }
-    document.getElementById('pdf-koersdoel-methode').textContent = ai.koersdoelMethode || 'Niet beschikbaar';
 
-    document.getElementById('kpi-koers').textContent = koers ? fmt(koers)  : String(fin.koers);
-    document.getElementById('kpi-doel').textContent  = doel  ? fmt(doel)   : String(fin.koersdoel);
+    // ── Koersdoel Methodologie: opbouwen uit koersdoelAfleiding object
+    const kda = ai.koersdoelAfleiding;
+    let methodeStr = 'Niet beschikbaar';
+    if (kda && typeof kda === 'object') {
+        const parts = [];
+        if (kda.dcf?.waardePerAandeel)    parts.push(`DCF ${kda.dcf.waardePerAandeel} (gewicht ${kda.dcf.gewicht})`);
+        if (kda.evEbitda?.waardePerAandeel) parts.push(`EV/EBITDA ${kda.evEbitda.waardePerAandeel} (gewicht ${kda.evEbitda.gewicht})`);
+        if (kda.pe?.waardePerAandeel)      parts.push(`P/E ${kda.pe.waardePerAandeel} (gewicht ${kda.pe.gewicht})`);
+        if (kda.rekencheck)                parts.push(`Check: ${kda.rekencheck}`);
+        methodeStr = parts.length ? parts.join(' · ') : 'Gewogen DCF/EV-EBITDA/P/E gemiddelde';
+    }
+    document.getElementById('pdf-koersdoel-methode').textContent = methodeStr;
+
+    // Rekencheck tonen indien aanwezig
+    const rekencheckEl = document.getElementById('pdf-koersdoel-rekencheck');
+    if (kda?.rekencheck) {
+        rekencheckEl.textContent = `Rekencheck: ${kda.rekencheck}`;
+        rekencheckEl.style.display = 'block';
+    } else {
+        rekencheckEl.style.display = 'none';
+    }
+
+    // Yahoo-noot tonen als AI-koersdoel significant afwijkt van Yahoo-analistendoel
+    const yahooNootEl = document.getElementById('pdf-koersdoel-yahoo-noot');
+    if (doel && leidendDoel && Math.abs(doel - leidendDoel) > 0.5) {
+        yahooNootEl.style.display = 'block';
+        yahooNootEl.textContent = `¹ Yahoo Finance analistengemiddelde: ${fmt(doel)} — ons intern koersdoel (${fmt(leidendDoel)}) is gebaseerd op een gewogen DCF/EV-EBITDA/P/E model en kan afwijken van externe consensusschattingen.`;
+    } else {
+        yahooNootEl.style.display = 'none';
+    }
+
+    document.getElementById('kpi-koers').textContent = koers ? fmt(koers) : String(fin.koers);
+    // KPI koersdoel: toon AI-koersdoel als leidend; Yahoo-analistendoel als subtext indien beschikbaar en afwijkend
+    const kpiDoelEl = document.getElementById('kpi-doel');
+    if (leidendDoel) {
+        kpiDoelEl.textContent = fmt(leidendDoel);
+        if (doel && Math.abs(doel - leidendDoel) > 0.5) {
+            kpiDoelEl.title = `Yahoo analistengemiddelde: ${fmt(doel)}`;
+            kpiDoelEl.style.cursor = 'help';
+        }
+    } else {
+        kpiDoelEl.textContent = doel ? fmt(doel) : String(fin.koersdoel);
+    }
     document.getElementById('kpi-mcap').textContent  = fmtBig(fin.marketCap);
     document.getElementById('kpi-pe').textContent    = typeof fin.pe === 'number' ? `${fin.pe.toFixed(1)}x` : String(fin.pe);
     document.getElementById('kpi-omzet').textContent = fmtBig(fin.omzet);
@@ -1185,12 +1254,27 @@ function renderReport(fin, ai) {
 
     const dcf = ai.dcf || {};
     const wacc = dcf.wacc || {};
-    document.getElementById('wacc-rf').textContent   = wacc.risicovrij   || '—';
-    document.getElementById('wacc-beta').textContent = wacc.beta         || '—';
-    document.getElementById('wacc-erp').textContent  = wacc.marktpremie  || '—';
-    document.getElementById('wacc-debt').textContent = wacc.schuldenPremie || '—';
-    document.getElementById('wacc-total').textContent = wacc.totaalWacc  || '—';
-    document.getElementById('dcf-tv').textContent    = dcf.terminaleWaarde || '—';
+    document.getElementById('wacc-rf').textContent    = wacc.risicovrij    || '—';
+    document.getElementById('wacc-beta').textContent  = wacc.beta          || '—';
+    document.getElementById('wacc-erp').textContent   = wacc.marktpremie   || '—';
+    document.getElementById('wacc-debt').textContent  = wacc.schuldenPremie || '—';
+    document.getElementById('wacc-total').textContent = wacc.totaalWacc    || '—';
+
+    // terminaleWaarde is een object met subvelden — bouw leesbare string op
+    const tv = dcf.terminaleWaarde;
+    let tvStr = '—';
+    if (tv && typeof tv === 'object') {
+        const tvParts = [];
+        if (tv.groeivoetKeuze)       tvParts.push(tv.groeivoetKeuze);
+        if (tv.berekening)           tvParts.push(tv.berekening);
+        if (tv.contanteWaardeTv)     tvParts.push(`Contante waarde TV: ${tv.contanteWaardeTv}`);
+        if (tv.aandeelInEv)          tvParts.push(`Aandeel in EV: ${tv.aandeelInEv}`);
+        if (tv.bridgeEvNaarEquity)   tvParts.push(tv.bridgeEvNaarEquity);
+        tvStr = tvParts.join(' · ') || '—';
+    } else if (typeof tv === 'string' && tv) {
+        tvStr = tv;
+    }
+    document.getElementById('dcf-tv').textContent = tvStr;
 
     const dcfRows = [
         { label: 'Omzet',       key: 'omzet'     },
@@ -1302,6 +1386,40 @@ function fmtBig(v) {
     return `$${v}`;
 }
 
+/* ── PDF PAGINANUMMERING HELPER ───────────────────────────────────────── */
+function addPageNumbers(pdf) {
+    const totalPages = pdf.internal.getNumberOfPages();
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const ticker = currentFinData?.ticker || '';
+    const datum  = new Date().toLocaleDateString('nl-NL');
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7);
+    pdf.setTextColor(148, 163, 184); // slate-400
+
+    for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        // Rechts: paginanummer
+        pdf.text(
+            `Pagina ${i} van ${totalPages}`,
+            pageW - 10, pageH - 6,
+            { align: 'right' }
+        );
+        // Links: DeAnalist · TICKER · datum
+        pdf.text(
+            `DeAnalist · Equity Research${ticker ? ' · ' + ticker : ''} · ${datum}`,
+            10, pageH - 6,
+            { align: 'left' }
+        );
+        // Dunne scheidingslijn
+        pdf.setDrawColor(226, 232, 240); // slate-200
+        pdf.setLineWidth(0.2);
+        pdf.line(10, pageH - 8.5, pageW - 10, pageH - 8.5);
+    }
+    return pdf;
+}
+
 /* ── PDF DOWNLOAD ─────────────────────────────────────────────────────── */
 function downloadPDF() {
     const el = document.getElementById('report-template');
@@ -1309,7 +1427,7 @@ function downloadPDF() {
     const origShadow = el.style.boxShadow;
     el.style.boxShadow = 'none';
     const opt = {
-        margin:      0,
+        margin:      [0, 0, 10, 0],  // onderaan 10mm ruimte voor paginanummer
         filename:    `DeAnalist_${ticker}_${new Date().toISOString().slice(0,10)}.pdf`,
         image:       { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false, width: 794, windowWidth: 794, scrollX: 0, scrollY: 0, x: 0, y: 0 },
@@ -1317,7 +1435,10 @@ function downloadPDF() {
         pagebreak:   { mode: ['avoid-all', 'css', 'legacy'] }
     };
     window.scrollTo(0, 0);
-    html2pdf().set(opt).from(el).save().then(() => { el.style.boxShadow = origShadow; });
+    html2pdf().set(opt).from(el).toPdf().get('pdf').then(pdf => {
+        addPageNumbers(pdf);
+        el.style.boxShadow = origShadow;
+    }).save();
 }
 
 /* ── OPSLAAN ─────────────────────────────────────────────────────────── */
@@ -1329,14 +1450,14 @@ async function saveToDatabase() {
     if (saveBtn) saveBtn.innerText = '⏳ Bezig met opslaan…';
     try {
         const opt = {
-            margin: 0,
+            margin: [0, 0, 10, 0],
             filename: `DeAnalist_${ticker}_${new Date().toISOString().slice(0,10)}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { scale: 2, useCORS: true, logging: false, width: 794, windowWidth: 794, scrollX: 0, scrollY: 0, x: 0, y: 0 },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
             pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
         };
-        const pdf = await html2pdf().set(opt).from(el).outputPdf('datauristring');
+        const pdf = await html2pdf().set(opt).from(el).toPdf().get('pdf').then(p => { addPageNumbers(p); return p; }).outputPdf('datauristring');
         if (!pdf) throw new Error('PDF kon niet worden gegenereerd.');
         const base64Data = pdf.split(',')[1];
         const response = await fetch('/api/reports', {
