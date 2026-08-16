@@ -1944,15 +1944,28 @@ function stToggle(bodyId, chvId) {
     }
 }
 
-function togglePdfFrame(frameWrapId, btnId, url) {
+async function togglePdfFrame(frameWrapId, btnId, url) {
     const wrap = document.getElementById(frameWrapId);
     const btn  = document.getElementById(btnId);
     if (!wrap) return;
     const isOpen = wrap.classList.contains('open');
     if (!isOpen) {
         const iframe = wrap.querySelector('iframe');
-        if (iframe && !iframe.src) iframe.src = url;
-        wrap.classList.add('open');
+        // Haal de HTML op via fetch en zet via srcdoc — voorkomt X-Frame-Options blokkering
+        if (iframe && !iframe.srcdoc) {
+            iframe.srcdoc = '<p style="font-family:sans-serif;padding:20px;color:#64748b;">Laden…</p>';
+            wrap.classList.add('open');
+            try {
+                const res = await fetch(url);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const html = await res.text();
+                iframe.srcdoc = html;
+            } catch (e) {
+                iframe.srcdoc = `<p style="font-family:sans-serif;padding:20px;color:#dc2626;">Kon rapport niet laden: ${e.message}</p>`;
+            }
+        } else {
+            wrap.classList.add('open');
+        }
         if (btn) {
             btn.classList.add('active');
             const span = btn.querySelector('span');
