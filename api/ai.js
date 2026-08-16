@@ -1,4 +1,7 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+// api/ai.js — Equity Research rapport generatie
+// Primair: Gemini 3.5 Flash  |  Fallback: Groq llama-3.3-70b-versatile
+
+import { callAI, parseJsonResponse } from './_ai-helper.js';
 
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -10,13 +13,11 @@ export default async function handler(req, res) {
     const { kpiData } = req.body;
     if (!kpiData) return res.status(400).json({ error: 'Geen financiële data ontvangen.' });
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY ontbreekt.' });
+    const geminiKey = process.env.GEMINI_API_KEY;
+    const groqKey   = process.env.GROQ_API_KEY;
+    if (!geminiKey) return res.status(500).json({ error: 'GEMINI_API_KEY ontbreekt.' });
 
     try {
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite", timeout: 55000 });
-
         const dataStr = JSON.stringify(kpiData, null, 2);
 
         const prompt = `Je bent een senior Equity Research Analyst (CFA-niveau). Analyseer het volgende bedrijf op basis van de aangeleverde marktdata.
@@ -289,18 +290,20 @@ Geef je antwoord UITSLUITEND als een geldig JSON-object met exact deze structuur
     "Koers, market cap, omzet, marges, dividendrendement: Yahoo Finance (real-time)",
     "Consensus koersdoel referentie: Financial Modeling Prep (analistengemiddelde)",
     "Prognoses FY2026-2030: eigen model op basis van historische groei + sectortrends",
-    "AI-tekstgeneratie en modelberekeningen: Google Gemini 3.5 Flash"
+    "AI-tekstgeneratie en modelberekeningen: Gemini 3.5 Flash / Groq llama-3.3-70b-versatile"
   ]
 }`;
 
-        const result = await model.generateContent(prompt);
-        const responseText = result.response.text();
-        const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-        const parsed = JSON.parse(cleanJson);
+        const { text, provider } = await callAI(prompt, { geminiKey, groqKey });
+        const parsed = parseJsonResponse(text);
+
+        // Voeg provider-info toe aan response (optioneel, handig voor debugging)
+        parsed._provider = provider;
+
         return res.status(200).json(parsed);
 
     } catch (error) {
-        console.error('Gemini API Fout:', error);
+        console.error('AI Fout (ai.js):', error);
         return res.status(500).json({ error: `Kon geen AI-analyse genereren (${error.message}).` });
     }
 }
