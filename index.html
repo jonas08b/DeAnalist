@@ -1510,7 +1510,7 @@ async function loadSavedReportsList() {
     const list = document.getElementById('saved-list');
     list.innerHTML = '<p class="da-empty-text">Laden…</p>';
     try {
-        const res  = await fetch('/api/reports');
+        const res  = await fetch('/api/reports?mode=equity');
         const data = await res.json();
         if (!res.ok || !data?.length) {
             list.innerHTML = '<p class="da-empty-text">Geen opgeslagen rapporten.</p>';
@@ -1798,7 +1798,7 @@ async function loadRapporten(force = false) {
       </div>`;
 
     try {
-        const res  = await fetch('/api/reports');
+        const res  = await fetch('/api/reports?mode=strategie');
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Ophalen mislukt.');
         rappData = Array.isArray(data) ? data : [];
