@@ -1,83 +1,53 @@
-import { put, list, del } from '@vercel/blob';
+// /api/reports.js
+// Leest strategie-rapportages metadata uit Vercel Blob.
+
+import { list } from '@vercel/blob';
 
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    if (req.method === 'OPTIONS') return res.status(200).end();
+    if (req.method !== 'GET') return res.status(405).json({ error: 'Alleen GET toegestaan.' });
 
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+    if (!blobToken) return res.status(500).json({ error: 'BLOB_READ_WRITE_TOKEN ontbreekt.' });
+
+    try {
+        // Haal alle JSON-metadata bestanden op voor de drie types
+        const [daily, weekly, deep] = await Promise.all([
+            list({ prefix: 'strategie-rapporten/daily/',  token: blobToken }),
+            list({ prefix: 'strategie-rapporten/weekly/', token: blobToken }),
+            list({ prefix: 'strategie-rapporten/deep/',   token: blobToken }),
+        ]);
+
+        const allBlobs = [
+            ...daily.blobs.filter(b => b.pathname.endsWith('.json')),
+            ...weekly.blobs.filter(b => b.pathname.endsWith('.json')),
+            ...deep.blobs.filter(b => b.pathname.endsWith('.json')),
+        ];
+
+        // Haal metadata op (parallel, max 15)
+        const metaResults = await Promise.all(
+            allBlobs.slice(0, 30).map(async (b) => {
+                try {
+                    const r = await fetch(b.url);
+                    if (!r.ok) return null;
+                    const meta = await r.json();
+                    // Bouw de HTML-URL af van de JSON-URL (zelfde pad, .html extensie)
+                    meta.htmlUrl = b.url.replace('.json', '.html');
+                    return meta;
+                } catch { return null; }
+            })
+        );
+
+        const rapporten = metaResults
+            .filter(Boolean)
+            .sort((a, b) => new Date(b.aangemaakt) - new Date(a.aangemaakt));
+
+        return res.status(200).json(rapporten);
+
+    } catch (err) {
+        console.error('[reports]', err);
+        return res.status(500).json({ error: `Ophalen mislukt: ${err.message}` });
     }
-
-    // 1. Rapport opslaan in Vercel Blob
-    if (req.method === 'POST') {
-        try {
-            const { ticker, title, pdfBase64 } = req.body;
-
-            if (!ticker || !pdfBase64) {
-                return res.status(400).json({ error: 'Ontbrekende data.' });
-            }
-
-            const fileName = `reports/${ticker}_${Date.now()}.pdf`;
-            const pdfBuffer = Buffer.from(pdfBase64, 'base64');
-
-            const blob = await put(fileName, pdfBuffer, {
-                access: 'public',
-                contentType: 'application/pdf',
-            });
-
-            return res.status(200).json({ success: true, url: blob.url });
-        } catch (error) {
-            console.error('Vercel Blob Opslag Fout:', error);
-            return res.status(500).json({ error: 'Kon rapport niet opslaan op Vercel Blob.' });
-        }
-    }
-
-    // 2. Alle opgeslagen rapporten ophalen
-    if (req.method === 'GET') {
-        try {
-            const { blobs } = await list({ prefix: 'reports/' });
-
-            const reports = blobs.map((b) => {
-                // Bestandsnaam formaat: reports/TICKER_TIMESTAMP.pdf
-                const fileName = b.pathname.replace('reports/', '').replace('.pdf', '');
-                const parts = fileName.split('_');
-                const timestamp = parts[parts.length - 1];
-                const ticker = parts.slice(0, parts.length - 1).join('_');
-                return {
-                    url: b.url,
-                    pathname: b.pathname,
-                    ticker: ticker || 'Onbekend',
-                    uploadedAt: b.uploadedAt || (timestamp ? new Date(parseInt(timestamp)).toISOString() : null),
-                };
-            });
-
-            reports.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
-
-            return res.status(200).json(reports);
-        } catch (error) {
-            console.error('Vercel Blob Ophalen Fout:', error);
-            return res.status(500).json({ error: 'Kon rapporten niet ophalen.' });
-        }
-    }
-
-    // 3. Rapport verwijderen uit Vercel Blob
-    if (req.method === 'DELETE') {
-        try {
-            const { url } = req.body;
-
-            if (!url) {
-                return res.status(400).json({ error: 'Ontbrekende URL.' });
-            }
-
-            await del(url);
-
-            return res.status(200).json({ success: true });
-        } catch (error) {
-            console.error('Vercel Blob Verwijderen Fout:', error);
-            return res.status(500).json({ error: 'Kon rapport niet verwijderen.' });
-        }
-    }
-
-    return res.status(405).json({ error: 'Methode niet toegestaan.' });
 }
