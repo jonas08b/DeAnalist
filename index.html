@@ -458,9 +458,9 @@
         .st-rcard:hover { border-color: #333; }
 
         /* Gekleurde linker accent-rand per type */
-        .st-rcard[data-cat="daily"]  { border-left: 3px solid #1d4ed8; }
-        .st-rcard[data-cat="weekly"] { border-left: 3px solid #7c3aed; }
-        .st-rcard[data-cat="deep"]   { border-left: 3px solid #0f766e; }
+        .st-rcard[data-cat="daily"]  { border-left: 3px solid var(--accent); }
+        .st-rcard[data-cat="weekly"] { border-left: 3px solid #8B5E3C; }
+        .st-rcard[data-cat="deep"]   { border-left: 3px solid #4a7c59; }
 
         .st-rcard-header {
             width: 100%; padding: 18px 20px; text-align: left;
@@ -478,9 +478,9 @@
             font-size: 9px; font-weight: 700; text-transform: uppercase;
             letter-spacing: .08em; padding: 3px 9px; border-radius: 5px;
         }
-        .rbadge-daily  { background: rgba(29,78,216,.15); color: #60a5fa; border: 1px solid rgba(29,78,216,.25); }
-        .rbadge-weekly { background: rgba(124,58,237,.15); color: #a78bfa; border: 1px solid rgba(124,58,237,.25); }
-        .rbadge-deep   { background: rgba(15,118,110,.15); color: #2dd4bf; border: 1px solid rgba(15,118,110,.25); }
+        .rbadge-daily  { background: rgba(200,49,26,.15);  color: #e8856f; border: 1px solid rgba(200,49,26,.25); }
+        .rbadge-weekly { background: rgba(139,94,60,.15);  color: #c4956a; border: 1px solid rgba(139,94,60,.25); }
+        .rbadge-deep   { background: rgba(74,124,89,.15);  color: #6db885; border: 1px solid rgba(74,124,89,.25); }
 
         .st-rcard-date {
             font-size: 10px; color: #4a5568; letter-spacing: .01em;
@@ -559,6 +559,120 @@
 
         /* Leeg-state */
         .st-empty { text-align: center; padding: 40px 20px; font-size: 13px; color: var(--ink-muted); }
+
+        /* ── THEMA SELECTOR ── */
+        .st-thema-bar {
+            display: flex; gap: 6px; overflow-x: auto; margin-bottom: 14px;
+            padding-bottom: 2px; scrollbar-width: none;
+        }
+        .st-thema-bar::-webkit-scrollbar { display: none; }
+        .st-thema-chip {
+            font-size: 11px; font-weight: 600; padding: 5px 12px;
+            border-radius: 20px; border: 1px solid var(--border);
+            background: var(--bg-card); color: var(--ink-muted);
+            cursor: pointer; white-space: nowrap;
+            font-family: var(--font-sans); flex-shrink: 0;
+            transition: background .1s, color .1s, border-color .1s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .st-thema-chip.active {
+            background: rgba(200,49,26,.15);
+            border-color: var(--accent);
+            color: #e8856f;
+        }
+
+        /* ── VISIE CARD ── */
+        .st-visie-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 16px; padding: 20px; margin-bottom: 16px;
+            border-left: 3px solid var(--accent);
+        }
+        .st-visie-tag {
+            font-size: 9px; font-weight: 700; letter-spacing: 2px;
+            text-transform: uppercase; color: var(--accent); margin-bottom: 8px;
+        }
+        .st-visie-titel {
+            font-family: var(--font-serif); font-size: 20px;
+            color: var(--ink); line-height: 1.25; margin-bottom: 10px;
+        }
+        .st-visie-conclusie {
+            font-size: 12px; color: #9aa3ae; line-height: 1.6;
+            border-left: 2px solid var(--accent); padding-left: 10px;
+            font-style: italic; margin-bottom: 14px;
+        }
+        .st-visie-tekst {
+            font-size: 13px; color: #b0bac5; line-height: 1.75;
+        }
+        .st-visie-tekst p { margin: 0 0 12px; }
+        .st-visie-tekst p:last-child { margin: 0; }
+
+        /* ── SCENARIO CARDS ── */
+        .st-scenarios-grid {
+            display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;
+        }
+        .st-scenario {
+            border-radius: 10px; padding: 14px 16px;
+            background: var(--bg-card); border: 1px solid var(--border);
+        }
+        .st-scenario-bull { border-left: 3px solid #22c55e; background: rgba(34,197,94,.05); }
+        .st-scenario-base { border-left: 3px solid var(--accent); background: rgba(200,49,26,.05); }
+        .st-scenario-bear { border-left: 3px solid #ef4444; background: rgba(239,68,68,.05); }
+        .st-scenario-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 6px;
+        }
+        .st-scenario-label {
+            font-size: 10px; font-weight: 700; letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .st-scenario-bull .st-scenario-label { color: #22c55e; }
+        .st-scenario-base .st-scenario-label { color: #e8856f; }
+        .st-scenario-bear .st-scenario-label { color: #ef4444; }
+        .st-scenario-kans {
+            font-size: 18px; font-weight: 700; color: var(--ink);
+        }
+        .st-scenario-kans span { font-size: 11px; font-weight: 500; color: var(--ink-muted); }
+        .st-scenario-body { font-size: 11.5px; color: #8a9099; line-height: 1.6; }
+        .st-scenario-trigger {
+            color: var(--ink-muted); margin-bottom: 4px;
+        }
+        .st-scenario-trigger strong { color: #c0c8d0; font-weight: 600; }
+        .st-scenario-impl { color: #7a8491; }
+        .st-scenario-impl strong { color: #aab0b8; font-weight: 600; }
+
+        /* ── KERNRISICO LIST ── */
+        .st-risico-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+        .st-risico-row {
+            display: flex; align-items: flex-start; gap: 10px;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 10px; padding: 12px 14px;
+        }
+        .st-risico-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+        .st-risico-content { flex: 1; min-width: 0; }
+        .st-risico-titel {
+            font-size: 12px; font-weight: 700; color: var(--ink); margin-bottom: 3px;
+        }
+        .st-risico-toelichting { font-size: 11px; color: #7a8491; line-height: 1.55; }
+
+        /* ── POSITIONING BOX ── */
+        .st-positioning-box {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 16px; margin-bottom: 16px;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+        }
+        .st-pos-item { display: flex; flex-direction: column; gap: 3px; }
+        .st-pos-label {
+            font-size: 9px; font-weight: 700; letter-spacing: 1.5px;
+            text-transform: uppercase; color: var(--ink-muted);
+        }
+        .st-pos-val { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+        .st-pos-aanbeveling {
+            grid-column: 1 / -1;
+            background: rgba(200,49,26,.08); border: 1px solid rgba(200,49,26,.2);
+            border-radius: 8px; padding: 10px 12px;
+        }
+        .st-pos-aanbeveling .st-pos-label { color: var(--accent); margin-bottom: 4px; }
+        .st-pos-aanbeveling .st-pos-val { font-size: 14px; color: var(--ink); }
 
         /* ── STRATEGIE HEADER ── */
         .st-header {
@@ -1030,6 +1144,16 @@
       <p class="st-hero-sub">Gelaagde analyse — macro, positionering en fundamentals in één conclusie.</p>
     </div>
 
+    <!-- THEMA SELECTOR -->
+    <div class="st-thema-bar" id="st-thema-bar">
+      <button class="st-thema-chip active" data-thema="" onclick="stThema('',this)">Breed markt</button>
+      <button class="st-thema-chip" data-thema="10Y Bund" onclick="stThema('10Y Bund',this)">10Y Bund</button>
+      <button class="st-thema-chip" data-thema="Yield Curve" onclick="stThema('Yield Curve',this)">Yield Curve</button>
+      <button class="st-thema-chip" data-thema="USD/EUR" onclick="stThema('USD/EUR',this)">USD/EUR</button>
+      <button class="st-thema-chip" data-thema="Energiemarkt" onclick="stThema('Energiemarkt',this)">Energiemarkt</button>
+      <button class="st-thema-chip" data-thema="Tech &amp; AI" onclick="stThema('Tech & AI',this)">Tech &amp; AI</button>
+    </div>
+
     <!-- LIVE MARKTDATA STRIP -->
     <div class="st-marktstrip" id="st-marktstrip"></div>
 
@@ -1081,6 +1205,32 @@
         <div class="st-bron-row"><span class="st-bron-badge">Yield Curve</span><span>Spread berekend als 10Y Yield − 2Y Yield (Treasury-proxy via Yahoo Finance); negatieve spread = inversie = historisch recessiesignaal</span></div>
         <div class="st-bron-row"><span class="st-bron-badge">Krediet</span><span>HYG (iShares HY Corp Bond ETF) als proxy voor High Yield credit spreads — daling HYG impliceert verruimende spreads</span></div>
       </div>
+    </div>
+
+    <!-- STRATEGY NOTE / VISIE -->
+    <div class="st-visie-card" id="st-visie-card" style="display:none;">
+      <div class="st-visie-tag" id="st-visie-tag">Strategy Note</div>
+      <div class="st-visie-titel" id="st-visie-titel">—</div>
+      <div class="st-visie-conclusie" id="st-visie-conclusie">—</div>
+      <div class="st-visie-tekst" id="st-visie-tekst"></div>
+    </div>
+
+    <!-- SCENARIO ANALYSE -->
+    <div id="st-scenarios-section" style="display:none;margin-bottom:4px;">
+      <div class="st-section-title" style="margin-bottom:10px;margin-top:0;">Scenario-analyse</div>
+      <div class="st-scenarios-grid" id="st-scenarios-grid"></div>
+    </div>
+
+    <!-- KERNRISICO'S -->
+    <div id="st-risicos-section" style="display:none;margin-bottom:4px;">
+      <div class="st-section-title" style="margin-bottom:10px;margin-top:0;">Kernrisico's</div>
+      <div class="st-risico-list" id="st-risicos-list"></div>
+    </div>
+
+    <!-- POSITIONERINGSADVIES -->
+    <div id="st-positioning-section" style="display:none;margin-bottom:4px;">
+      <div class="st-section-title" style="margin-bottom:10px;margin-top:0;">Positioneringsadvies</div>
+      <div class="st-positioning-box" id="st-positioning-box"></div>
     </div>
 
     <!-- RAPPORTAGES -->
@@ -1633,7 +1783,8 @@ function renderMarktstrip(md) {
         { label: 'S&P 500', waarde: md.sp500?.prijs?.toLocaleString('nl-NL', {minimumFractionDigits:0}), pct: md.sp500?.changePct },
         { label: 'Nasdaq',  waarde: md.nasdaq?.prijs?.toLocaleString('nl-NL', {minimumFractionDigits:0}), pct: md.nasdaq?.changePct },
         { label: 'VIX',     waarde: md.vix?.waarde?.toFixed(2), pct: md.vix?.changePct },
-        { label: '10Y',     waarde: md.yield10y?.waarde?.toFixed(2) + '%', pct: md.yield10y?.changePct },
+        { label: '10Y UST', waarde: md.yield10y?.waarde?.toFixed(2) + '%', pct: md.yield10y?.changePct },
+        { label: 'Bund',    waarde: md.bund?.waarde != null ? md.bund.waarde.toFixed(2) + '%' : null, pct: md.bund?.changePct },
         { label: 'DXY',     waarde: md.dxy?.waarde?.toFixed(1), pct: md.dxy?.changePct },
         { label: 'WTI',     waarde: '$' + md.oil?.waarde?.toFixed(1), pct: md.oil?.changePct },
     ];
@@ -1741,6 +1892,41 @@ function renderRegime(data) {
     }
     card.style.display = 'block';
     if (bronCard) bronCard.style.display = 'block';
+
+    // ── Visie card ─────────────────────────────────────────────────────
+    if (data.visie) {
+        const vCard   = document.getElementById('st-visie-card');
+        const vTag    = document.getElementById('st-visie-tag');
+        const vTitel  = document.getElementById('st-visie-titel');
+        const vConcl  = document.getElementById('st-visie-conclusie');
+        const vTekst  = document.getElementById('st-visie-tekst');
+        if (vTitel)  vTitel.textContent  = data.visie.titel  || '—';
+        if (vConcl)  vConcl.textContent  = data.visie.conclusie || '—';
+        if (vTag && data._thema) vTag.textContent = `Strategy Note — ${data._thema}`;
+        if (vTekst && data.visie.tekst) {
+            // Split op dubbele newline als alinea's, anders toon als één blok
+            const alineas = data.visie.tekst.split(/\n\n+/).filter(Boolean);
+            vTekst.innerHTML = alineas.length > 1
+                ? alineas.map(a => `<p>${a.replace(/\n/g, '<br>')}</p>`).join('')
+                : `<p>${data.visie.tekst.replace(/\n/g, '<br>')}</p>`;
+        }
+        if (vCard) vCard.style.display = 'block';
+    }
+
+    // ── Scenario's ─────────────────────────────────────────────────────
+    if (Array.isArray(data.scenarios) && data.scenarios.length) {
+        renderScenarios(data.scenarios);
+    }
+
+    // ── Kernrisico's ───────────────────────────────────────────────────
+    if (Array.isArray(data.kernrisicos) && data.kernrisicos.length) {
+        renderKernrisicos(data.kernrisicos);
+    }
+
+    // ── Positioning ────────────────────────────────────────────────────
+    if (data.positioning) {
+        renderPositioning(data.positioning);
+    }
 }
 
 function toggleIndicatorDrawer(id, mainEl) {
@@ -1752,6 +1938,87 @@ function toggleIndicatorDrawer(id, mainEl) {
     document.querySelectorAll('.st-indicator-drawer').forEach(d => d.classList.remove('open'));
     document.querySelectorAll('.st-indicator-chevron').forEach(c => c.classList.remove('open'));
     if (!isOpen) { drawer.classList.add('open'); if (chv) chv.classList.add('open'); }
+}
+
+let actieveThema = '';
+
+function stThema(thema, btn) {
+    if (thema === actieveThema) return;
+    actieveThema = thema;
+    document.querySelectorAll('.st-thema-chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    // Reset en herlaad
+    strategieGeladen = false;
+    strategieLaden   = false;
+    // Verberg oude content
+    ['st-regime-card','st-bronnen-card','st-visie-card',
+     'st-scenarios-section','st-risicos-section','st-positioning-section'
+    ].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+    document.getElementById('st-marktstrip').innerHTML = '';
+    loadStrategie();
+}
+
+function renderScenarios(scenarios) {
+    const section = document.getElementById('st-scenarios-section');
+    const grid    = document.getElementById('st-scenarios-grid');
+    if (!grid || !section) return;
+    const typeClass = { 'Bull Case': 'st-scenario-bull', 'Base Case': 'st-scenario-base', 'Bear Case': 'st-scenario-bear' };
+    grid.innerHTML = scenarios.map(s => {
+        const cls = typeClass[s.label] || 'st-scenario-base';
+        return `<div class="st-scenario ${cls}">
+            <div class="st-scenario-header">
+                <span class="st-scenario-label">${s.label}</span>
+                <span class="st-scenario-kans">${s.kans}<span>%</span></span>
+            </div>
+            <div class="st-scenario-body">
+                <div class="st-scenario-trigger"><strong>Trigger:</strong> ${s.trigger || '—'}</div>
+                <div class="st-scenario-impl"><strong>Implicatie:</strong> ${s.implicatie || '—'}</div>
+            </div>
+        </div>`;
+    }).join('');
+    section.style.display = 'block';
+}
+
+function renderKernrisicos(risicos) {
+    const section = document.getElementById('st-risicos-section');
+    const list    = document.getElementById('st-risicos-list');
+    if (!list || !section) return;
+    list.innerHTML = risicos.map(r => {
+        const icon = r.richting === 'opwaarts' ? '↑' : '↓';
+        const clr  = r.richting === 'opwaarts' ? '#22c55e' : '#ef4444';
+        return `<div class="st-risico-row">
+            <div class="st-risico-icon" style="color:${clr};">${icon}</div>
+            <div class="st-risico-content">
+                <div class="st-risico-titel">${r.titel || '—'}</div>
+                <div class="st-risico-toelichting">${r.toelichting || '—'}</div>
+            </div>
+        </div>`;
+    }).join('');
+    section.style.display = 'block';
+}
+
+function renderPositioning(pos) {
+    const section = document.getElementById('st-positioning-section');
+    const box     = document.getElementById('st-positioning-box');
+    if (!box || !section) return;
+    box.innerHTML = `
+        <div class="st-pos-item st-pos-aanbeveling">
+            <div class="st-pos-label">Aanbeveling</div>
+            <div class="st-pos-val">${pos.aanbeveling || '—'}</div>
+        </div>
+        <div class="st-pos-item">
+            <div class="st-pos-label">Entry Zone</div>
+            <div class="st-pos-val">${pos.entryZone || '—'}</div>
+        </div>
+        <div class="st-pos-item">
+            <div class="st-pos-label">Target</div>
+            <div class="st-pos-val">${pos.target || '—'}</div>
+        </div>
+        <div class="st-pos-item">
+            <div class="st-pos-label">Horizon</div>
+            <div class="st-pos-val">${pos.horizon || '—'}</div>
+        </div>`;
+    section.style.display = 'block';
 }
 
 async function loadStrategie() {
@@ -1767,7 +2034,8 @@ async function loadStrategie() {
     try {
         // Cache wordt server-side afgehandeld via Vercel Blob.
         // De API geeft _cached:true terug als het een hit was.
-        const res  = await fetch('/api/strategy');
+        const url  = actieveThema ? `/api/strategy?thema=${encodeURIComponent(actieveThema)}` : '/api/strategy';
+        const res  = await fetch(url);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Strategie-analyse mislukt.');
 
