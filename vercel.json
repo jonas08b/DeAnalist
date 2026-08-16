@@ -14,15 +14,18 @@
   "crons": [
     {
       "path": "/api/generate-report?type=daily",
-      "schedule": "0 6 * * 1-5"
+      "schedule": "0 5 * * 1-5",
+      "_comment": "Maandag t/m vrijdag 05:00 UTC = 07:00 CET (zomertijd UTC+2). In wintertijd (UTC+1): 06:00 lokaal. Verander naar '0 6 * * 1-5' in winterperiode of gebruik timezone-aware cron."
     },
     {
       "path": "/api/generate-report?type=weekly",
-      "schedule": "0 6 * * 1"
+      "schedule": "0 5 * * 1",
+      "_comment": "Elke maandag 05:00 UTC = 07:00 CET zomertijd"
     },
     {
       "path": "/api/generate-report?type=deep",
-      "schedule": "0 6 * * 1"
+      "schedule": "0 5 * * 1",
+      "_comment": "Elke maandag 05:00 UTC = 07:00 CET zomertijd — tegelijk met weekly"
     }
   ],
   "headers": [
