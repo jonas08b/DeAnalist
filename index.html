@@ -560,26 +560,93 @@
         /* Leeg-state */
         .st-empty { text-align: center; padding: 40px 20px; font-size: 13px; color: var(--ink-muted); }
 
-        /* ── THEMA SELECTOR ── */
-        .st-thema-bar {
-            display: flex; gap: 6px; overflow-x: auto; margin-bottom: 14px;
-            padding-bottom: 2px; scrollbar-width: none;
+        /* ── OP AANVRAAG ── */
+        .st-aanvraag-wrap {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 16px; padding: 20px; margin-bottom: 12px;
         }
-        .st-thema-bar::-webkit-scrollbar { display: none; }
-        .st-thema-chip {
-            font-size: 11px; font-weight: 600; padding: 5px 12px;
-            border-radius: 20px; border: 1px solid var(--border);
-            background: var(--bg-card); color: var(--ink-muted);
+        .st-aanvraag-title {
+            font-family: var(--font-serif); font-size: 18px; color: var(--ink);
+            margin-bottom: 6px;
+        }
+        .st-aanvraag-sub {
+            font-size: 12px; color: var(--ink-muted); line-height: 1.6; margin-bottom: 16px;
+        }
+        .st-aanvraag-form { display: flex; gap: 8px; }
+        .st-aanvraag-input {
+            flex: 1; background: var(--bg-card2); border: 1px solid var(--border);
+            border-radius: 10px; padding: 10px 14px; font-size: 13px;
+            color: var(--ink); font-family: var(--font-sans);
+            outline: none; transition: border-color .15s;
+        }
+        .st-aanvraag-input:focus { border-color: var(--accent); }
+        .st-aanvraag-input::placeholder { color: var(--ink-faint); }
+        .st-aanvraag-btn {
+            background: var(--accent); color: #fff; border: none;
+            border-radius: 10px; padding: 10px 18px; font-size: 13px;
+            font-weight: 700; font-family: var(--font-sans);
             cursor: pointer; white-space: nowrap;
-            font-family: var(--font-sans); flex-shrink: 0;
-            transition: background .1s, color .1s, border-color .1s;
+            transition: opacity .15s; -webkit-tap-highlight-color: transparent;
+        }
+        .st-aanvraag-btn:disabled { opacity: .45; cursor: not-allowed; }
+        .st-aanvraag-btn:hover:not(:disabled) { opacity: .85; }
+        .st-aanvraag-suggesties {
+            display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px;
+        }
+        .st-aanvraag-sug {
+            font-size: 11px; padding: 4px 10px; border-radius: 20px;
+            border: 1px solid var(--border); background: var(--bg-card2);
+            color: var(--ink-muted); cursor: pointer; font-family: var(--font-sans);
+            transition: border-color .1s, color .1s;
             -webkit-tap-highlight-color: transparent;
         }
-        .st-thema-chip.active {
-            background: rgba(200,49,26,.15);
-            border-color: var(--accent);
-            color: #e8856f;
+        .st-aanvraag-sug:hover { border-color: #444; color: var(--ink); }
+
+        /* Aanvraag rapport resultaat */
+        .st-aanvraag-result {
+            margin-top: 16px; display: none;
         }
+        .st-aanvraag-rcard {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 14px; overflow: hidden;
+            border-left: 3px solid var(--accent);
+        }
+        .st-aanvraag-rcard-header {
+            padding: 18px 20px;
+        }
+        .st-aanvraag-rtag {
+            font-size: 9px; font-weight: 700; letter-spacing: 2px;
+            text-transform: uppercase; color: var(--accent); margin-bottom: 8px;
+        }
+        .st-aanvraag-rtitel {
+            font-family: var(--font-serif); font-size: 19px;
+            color: var(--ink); line-height: 1.25; margin-bottom: 10px;
+        }
+        .st-aanvraag-rconcl {
+            font-size: 12px; color: #9aa3ae; line-height: 1.6;
+            border-left: 2px solid var(--accent); padding-left: 10px;
+            font-style: italic;
+        }
+        .st-aanvraag-rdetail {
+            border-top: 1px solid var(--border);
+            padding: 18px 20px; display: none;
+        }
+        .st-aanvraag-rdetail.open { display: block; }
+        .st-aanvraag-rtekst {
+            font-size: 13px; color: #b0bac5; line-height: 1.75; margin-bottom: 16px;
+        }
+        .st-aanvraag-rtekst p { margin: 0 0 12px; }
+        .st-aanvraag-rtekst p:last-child { margin: 0; }
+        .st-aanvraag-expand {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 20px; cursor: pointer;
+            border-top: 1px solid var(--border);
+            background: none; border-bottom: none; border-left: none; border-right: none;
+            width: 100%; font-family: var(--font-sans); font-size: 12px;
+            font-weight: 600; color: var(--ink-muted);
+            transition: color .1s; -webkit-tap-highlight-color: transparent;
+        }
+        .st-aanvraag-expand:hover { color: var(--ink); }
 
         /* ── VISIE CARD ── */
         .st-visie-card {
@@ -1144,16 +1211,6 @@
       <p class="st-hero-sub">Gelaagde analyse — macro, positionering en fundamentals in één conclusie.</p>
     </div>
 
-    <!-- THEMA SELECTOR -->
-    <div class="st-thema-bar" id="st-thema-bar">
-      <button class="st-thema-chip active" data-thema="" onclick="stThema('',this)">Breed markt</button>
-      <button class="st-thema-chip" data-thema="10Y Bund" onclick="stThema('10Y Bund',this)">10Y Bund</button>
-      <button class="st-thema-chip" data-thema="Yield Curve" onclick="stThema('Yield Curve',this)">Yield Curve</button>
-      <button class="st-thema-chip" data-thema="USD/EUR" onclick="stThema('USD/EUR',this)">USD/EUR</button>
-      <button class="st-thema-chip" data-thema="Energiemarkt" onclick="stThema('Energiemarkt',this)">Energiemarkt</button>
-      <button class="st-thema-chip" data-thema="Tech &amp; AI" onclick="stThema('Tech & AI',this)">Tech &amp; AI</button>
-    </div>
-
     <!-- LIVE MARKTDATA STRIP -->
     <div class="st-marktstrip" id="st-marktstrip"></div>
 
@@ -1243,10 +1300,37 @@
     </div>
 
     <div class="st-filter-row">
-      <button class="st-fbtn active" data-cat="all"    onclick="stFilter('all',this)">Alle</button>
-      <button class="st-fbtn"        data-cat="daily"  onclick="stFilter('daily',this)">Daily Strategy</button>
-      <button class="st-fbtn"        data-cat="weekly" onclick="stFilter('weekly',this)">Weekly Positioning</button>
-      <button class="st-fbtn"        data-cat="deep"   onclick="stFilter('deep',this)">Deep-Dive</button>
+      <button class="st-fbtn active" data-cat="all"      onclick="stFilter('all',this)">Alle</button>
+      <button class="st-fbtn"        data-cat="daily"    onclick="stFilter('daily',this)">Daily Strategy</button>
+      <button class="st-fbtn"        data-cat="weekly"   onclick="stFilter('weekly',this)">Weekly Positioning</button>
+      <button class="st-fbtn"        data-cat="deep"     onclick="stFilter('deep',this)">Deep-Dive</button>
+      <button class="st-fbtn"        data-cat="aanvraag" onclick="stFilter('aanvraag',this)">Op aanvraag</button>
+    </div>
+
+    <!-- OP AANVRAAG SECTIE -->
+    <div id="st-aanvraag-section" style="display:none;">
+      <div class="st-aanvraag-wrap">
+        <div class="st-aanvraag-title">Thematisch rapport</div>
+        <p class="st-aanvraag-sub">Geef een thema, sector of vraagstuk op. De analyse wordt opgebouwd als een volledig institutioneel strategy rapport — inclusief scenario's, kernrisico's en positioneringsadvies.</p>
+        <div class="st-aanvraag-form">
+          <input class="st-aanvraag-input" id="st-aanvraag-input"
+            type="text" placeholder="bijv. 10Y Bund, EUR/USD breakout, energiemarkt Q4, AI-waarderingen…"
+            onkeydown="if(event.key==='Enter')stAanvraagSubmit()" maxlength="120">
+          <button class="st-aanvraag-btn" id="st-aanvraag-btn" onclick="stAanvraagSubmit()">Genereer</button>
+        </div>
+        <div class="st-aanvraag-suggesties">
+          <span class="st-aanvraag-sug" onclick="stAanvraagSug(this)">10Y Bund</span>
+          <span class="st-aanvraag-sug" onclick="stAanvraagSug(this)">EUR/USD</span>
+          <span class="st-aanvraag-sug" onclick="stAanvraagSug(this)">Yield Curve inversie</span>
+          <span class="st-aanvraag-sug" onclick="stAanvraagSug(this)">Energiemarkt WTI</span>
+          <span class="st-aanvraag-sug" onclick="stAanvraagSug(this)">Tech & AI waarderingen</span>
+          <span class="st-aanvraag-sug" onclick="stAanvraagSug(this)">Credit spreads HY</span>
+          <span class="st-aanvraag-sug" onclick="stAanvraagSug(this)">DXY & EM impact</span>
+        </div>
+      </div>
+
+      <!-- RESULTAAT -->
+      <div class="st-aanvraag-result" id="st-aanvraag-result"></div>
     </div>
 
     <div class="st-cards" id="st-cards">
@@ -1940,22 +2024,137 @@ function toggleIndicatorDrawer(id, mainEl) {
     if (!isOpen) { drawer.classList.add('open'); if (chv) chv.classList.add('open'); }
 }
 
-let actieveThema = '';
+/* ── OP AANVRAAG ──────────────────────────────────────────────────────── */
 
-function stThema(thema, btn) {
-    if (thema === actieveThema) return;
-    actieveThema = thema;
-    document.querySelectorAll('.st-thema-chip').forEach(c => c.classList.remove('active'));
-    btn.classList.add('active');
-    // Reset en herlaad
-    strategieGeladen = false;
-    strategieLaden   = false;
-    // Verberg oude content
-    ['st-regime-card','st-bronnen-card','st-visie-card',
-     'st-scenarios-section','st-risicos-section','st-positioning-section'
-    ].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
-    document.getElementById('st-marktstrip').innerHTML = '';
-    loadStrategie();
+function stAanvraagSug(el) {
+    const input = document.getElementById('st-aanvraag-input');
+    if (input) { input.value = el.textContent; input.focus(); }
+}
+
+async function stAanvraagSubmit() {
+    const input  = document.getElementById('st-aanvraag-input');
+    const btn    = document.getElementById('st-aanvraag-btn');
+    const result = document.getElementById('st-aanvraag-result');
+    const thema  = (input?.value || '').trim();
+    if (!thema) { input?.focus(); return; }
+
+    btn.disabled    = true;
+    btn.textContent = 'Analyseren…';
+    result.style.display = 'none';
+    result.innerHTML = '';
+
+    try {
+        const res  = await fetch(`/api/strategy?thema=${encodeURIComponent(thema)}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Analyse mislukt.');
+        result.innerHTML  = renderAanvraagRapport(data, thema);
+        result.style.display = 'block';
+    } catch (err) {
+        result.innerHTML = `<div style="background:#1f0a0a;border:1px solid #3a1a1a;border-radius:12px;padding:14px;font-size:13px;color:#f87171;">⚠ ${err.message}</div>`;
+        result.style.display = 'block';
+    } finally {
+        btn.disabled    = false;
+        btn.textContent = 'Genereer';
+    }
+}
+
+function renderAanvraagRapport(data, thema) {
+    const v   = data.visie || {};
+    const pos = data.positioning || {};
+    const sc  = Array.isArray(data.scenarios)    ? data.scenarios    : [];
+    const kr  = Array.isArray(data.kernrisicos)  ? data.kernrisicos  : [];
+
+    const typeClass = { 'Bull Case': 'st-scenario-bull', 'Base Case': 'st-scenario-base', 'Bear Case': 'st-scenario-bear' };
+
+    // Alinea's uit visie tekst
+    const alineas = (v.tekst || '').split(/\n\n+/).filter(Boolean);
+    const tekst   = alineas.length > 1
+        ? alineas.map(a => `<p>${a.replace(/\n/g, '<br>')}</p>`).join('')
+        : `<p>${(v.tekst || '').replace(/\n/g, '<br>')}</p>`;
+
+    // Scenario's HTML
+    const scenHTML = sc.map(s => {
+        const cls = typeClass[s.label] || 'st-scenario-base';
+        return `<div class="st-scenario ${cls}">
+            <div class="st-scenario-header">
+                <span class="st-scenario-label">${s.label}</span>
+                <span class="st-scenario-kans">${s.kans}<span>%</span></span>
+            </div>
+            <div class="st-scenario-body">
+                <div class="st-scenario-trigger"><strong>Trigger:</strong> ${s.trigger || '—'}</div>
+                <div class="st-scenario-impl"><strong>Implicatie:</strong> ${s.implicatie || '—'}</div>
+            </div>
+        </div>`;
+    }).join('');
+
+    // Kernrisico's HTML
+    const krHTML = kr.map(r => {
+        const icon = r.richting === 'opwaarts' ? '↑' : '↓';
+        const clr  = r.richting === 'opwaarts' ? '#22c55e' : '#ef4444';
+        return `<div class="st-risico-row">
+            <div class="st-risico-icon" style="color:${clr};">${icon}</div>
+            <div class="st-risico-content">
+                <div class="st-risico-titel">${r.titel || '—'}</div>
+                <div class="st-risico-toelichting">${r.toelichting || '—'}</div>
+            </div>
+        </div>`;
+    }).join('');
+
+    // Positioning HTML
+    const posHTML = pos.aanbeveling ? `
+        <div class="st-positioning-box">
+            <div class="st-pos-item st-pos-aanbeveling">
+                <div class="st-pos-label">Aanbeveling</div>
+                <div class="st-pos-val">${pos.aanbeveling}</div>
+            </div>
+            <div class="st-pos-item">
+                <div class="st-pos-label">Entry Zone</div>
+                <div class="st-pos-val">${pos.entryZone || '—'}</div>
+            </div>
+            <div class="st-pos-item">
+                <div class="st-pos-label">Target</div>
+                <div class="st-pos-val">${pos.target || '—'}</div>
+            </div>
+            <div class="st-pos-item">
+                <div class="st-pos-label">Horizon</div>
+                <div class="st-pos-val">${pos.horizon || '—'}</div>
+            </div>
+        </div>` : '';
+
+    return `<div class="st-aanvraag-rcard">
+        <div class="st-aanvraag-rcard-header">
+            <div class="st-aanvraag-rtag">Op Aanvraag &nbsp;·&nbsp; ${thema}</div>
+            <div class="st-aanvraag-rtitel">${v.titel || thema}</div>
+            <div class="st-aanvraag-rconcl">${v.conclusie || '—'}</div>
+        </div>
+
+        <button class="st-aanvraag-expand" onclick="stAanvraagToggle(this)">
+            <span>Volledige analyse</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+
+        <div class="st-aanvraag-rdetail">
+            <div class="st-aanvraag-rtekst">${tekst}</div>
+
+            ${sc.length ? `<div class="st-section-title" style="margin-bottom:10px;">Scenario-analyse</div>
+            <div class="st-scenarios-grid" style="margin-bottom:18px;">${scenHTML}</div>` : ''}
+
+            ${kr.length ? `<div class="st-section-title" style="margin-bottom:10px;">Kernrisico's</div>
+            <div class="st-risico-list" style="margin-bottom:18px;">${krHTML}</div>` : ''}
+
+            ${posHTML ? `<div class="st-section-title" style="margin-bottom:10px;">Positioneringsadvies</div>${posHTML}` : ''}
+        </div>
+    </div>`;
+}
+
+function stAanvraagToggle(btn) {
+    const detail = btn.nextElementSibling;
+    if (!detail) return;
+    const isOpen = detail.classList.contains('open');
+    detail.classList.toggle('open', !isOpen);
+    const svg = btn.querySelector('svg');
+    if (svg) svg.style.transform = isOpen ? '' : 'rotate(180deg)';
+    btn.querySelector('span').textContent = isOpen ? 'Volledige analyse' : 'Inklappen';
 }
 
 function renderScenarios(scenarios) {
@@ -2034,7 +2233,7 @@ async function loadStrategie() {
     try {
         // Cache wordt server-side afgehandeld via Vercel Blob.
         // De API geeft _cached:true terug als het een hit was.
-        const url  = actieveThema ? `/api/strategy?thema=${encodeURIComponent(actieveThema)}` : '/api/strategy';
+        const url  = '/api/strategy';
         const res  = await fetch(url);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Strategie-analyse mislukt.');
@@ -2253,7 +2452,18 @@ function stFilter(cat, btn) {
     rappActiefFilter = cat;
     document.querySelectorAll('.st-fbtn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    renderRapportCards(cat);
+
+    const aanvraagSection = document.getElementById('st-aanvraag-section');
+    const cardsSection    = document.getElementById('st-cards');
+
+    if (cat === 'aanvraag') {
+        if (aanvraagSection) aanvraagSection.style.display = 'block';
+        if (cardsSection)    cardsSection.style.display    = 'none';
+    } else {
+        if (aanvraagSection) aanvraagSection.style.display = 'none';
+        if (cardsSection)    cardsSection.style.display    = 'flex';
+        renderRapportCards(cat);
+    }
 }
 
 /* ── MAIN TAB SWITCHING ─────────────────────────────────────────────── */
