@@ -1,5 +1,5 @@
 // /api/generate-report.js
-// Genereert één strategie-rapport (daily / weekly / deep) via Gemini 2.0 Flash
+// Genereert één strategie-rapport (daily / weekly / deep) via Gemini 3.5 Flash
 // en slaat metadata + HTML op in Vercel Blob.
 // Wordt aangeroepen door Vercel Cron (GET) of handmatig (GET/POST).
 
@@ -538,7 +538,7 @@ export default async function handler(req, res) {
 
         // ── Gemini 2.0 Flash generatie ──
         const genAI  = new GoogleGenerativeAI(geminiKey);
-        const model  = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+        const model  = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
 
         const result = await model.generateContent(buildPrompt(type, marktStr, datum));
         const raw    = result.response.text().replace(/```json|```/g, '').trim();
