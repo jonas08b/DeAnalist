@@ -12,18 +12,9 @@
     "api/generate-report.js": { "maxDuration": 60 }
   },
   "crons": [
-    {
-      "path": "/api/generate-report?type=daily",
-      "schedule": "0 5 * * 1-5",
-    },
-    {
-      "path": "/api/generate-report?type=weekly",
-      "schedule": "0 5 * * 1",
-    },
-    {
-      "path": "/api/generate-report?type=deep",
-      "schedule": "0 5 * * 1",
-    }
+    { "path": "/api/generate-report?type=daily",  "schedule": "0 5 * * 1-5" },
+    { "path": "/api/generate-report?type=weekly", "schedule": "0 5 * * 1"   },
+    { "path": "/api/generate-report?type=deep",   "schedule": "0 5 * * 1"   }
   ],
   "headers": [
     {
