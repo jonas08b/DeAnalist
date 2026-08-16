@@ -1,10 +1,11 @@
-// /api/generate-report.js
+// api/generate-report.js
 // Genereert één strategie-rapport (daily / weekly / deep) via Gemini 3.5 Flash
-// en slaat metadata + HTML op in Vercel Blob.
+// met Groq llama-3.3-70b-versatile als fallback bij rate limits.
+// Slaat metadata + HTML op in Vercel Blob.
 // Wordt aangeroepen door Vercel Cron (GET) of handmatig (GET/POST).
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { put, list }          from '@vercel/blob';
+import { callAI, parseJsonResponse } from './_ai-helper.js';
+import { put, list }                  from '@vercel/blob';
 
 // ─── Yahoo Finance helpers ───────────────────────────────────────────────────
 
@@ -371,7 +372,7 @@ function buildPdfHtml(type, content, datum) {
   <div class="rp-footer">
     <div class="rp-disclaimer">
       <strong>Disclaimer:</strong> Dit rapport is uitsluitend informatief van aard en vormt op geen enkele wijze beleggingsadvies, aanbeveling of uitnodiging tot aan- of verkoop van financiële instrumenten.
-      Prognoses en analyses zijn gebaseerd op publiek beschikbare marktdata en AI-modeluitkomsten. Raadpleeg een erkend beleggingsadviseur voor persoonlijk advies. 
+      Prognoses en analyses zijn gebaseerd op publiek beschikbare marktdata en AI-modeluitkomsten. Raadpleeg een erkend beleggingsadviseur voor persoonlijk advies.
       Verleden rendementen bieden geen garantie voor toekomstige resultaten. © DeAnalist ${jaar}
     </div>
     <div class="rp-footer-logo">De<span>Analist</span></div>
@@ -507,13 +508,15 @@ export default async function handler(req, res) {
     }
 
     const geminiKey = process.env.GEMINI_API_KEY;
+    const groqKey   = process.env.GROQ_API_KEY;
     const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+
     if (!geminiKey) return res.status(500).json({ error: 'GEMINI_API_KEY ontbreekt.' });
     if (!blobToken) return res.status(500).json({ error: 'BLOB_READ_WRITE_TOKEN ontbreekt.' });
 
     // ── Datum in Belgische tijd ──
-    const now = new Date();
-    const datumISO = now.toLocaleDateString('sv-SE', { timeZone: 'Europe/Brussels' }); // 'YYYY-MM-DD'
+    const now      = new Date();
+    const datumISO = now.toLocaleDateString('sv-SE', { timeZone: 'Europe/Brussels' });
     const datum    = now.toLocaleDateString('nl-NL', {
         timeZone: 'Europe/Brussels',
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
@@ -536,18 +539,17 @@ export default async function handler(req, res) {
         const markt    = await fetchMarktdata();
         const marktStr = JSON.stringify(markt, null, 2);
 
-        // ── Gemini 2.0 Flash generatie ──
-        const genAI  = new GoogleGenerativeAI(geminiKey);
-        const model  = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
-
-        const result = await model.generateContent(buildPrompt(type, marktStr, datum));
-        const raw    = result.response.text().replace(/```json|```/g, '').trim();
-        const parsed = JSON.parse(raw);
+        // ── AI-generatie (Gemini 3.5 Flash → Groq fallback) ──
+        const { text, provider } = await callAI(
+            buildPrompt(type, marktStr, datum),
+            { geminiKey, groqKey }
+        );
+        const parsed = parseJsonResponse(text);
 
         // ── HTML samenstellen ──
-        const strip   = marktStripHtml(markt);
+        const strip       = marktStripHtml(markt);
         const sectiesHtml = sectiesToHtml(parsed.secties || []);
-        const pdfHtml = buildPdfHtml(type, {
+        const pdfHtml     = buildPdfHtml(type, {
             titel:      parsed.titel,
             conclusie:  parsed.conclusie,
             secties:    sectiesHtml,
@@ -562,7 +564,8 @@ export default async function handler(req, res) {
             datum,
             datumISO,
             aangemaakt: new Date().toISOString(),
-            intro:      (parsed.intro || parsed.secties?.[0]?.inhoud || '').slice(0, 240).trim() + '…',
+            provider,
+            intro: (parsed.intro || parsed.secties?.[0]?.inhoud || '').slice(0, 240).trim() + '…',
         };
 
         const metaPath = `strategie-rapporten/${type}/${datumISO}.json`;
@@ -578,7 +581,7 @@ export default async function handler(req, res) {
             addRandomSuffix: false, contentType: 'application/json',
         });
 
-        return res.status(200).json({ success: true, type, datum, titel: parsed.titel });
+        return res.status(200).json({ success: true, type, datum, titel: parsed.titel, provider });
 
     } catch (err) {
         console.error('[generate-report]', err);
