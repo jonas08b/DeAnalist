@@ -435,75 +435,108 @@
         }
         .st-fbtn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
-        /* Report cards */
-        .st-cards { display: flex; flex-direction: column; gap: 8px; }
+        /* ── RAPPORTAGE KAARTEN ── */
+        .st-cards { display: flex; flex-direction: column; gap: 10px; }
         .st-rcard {
-            background: var(--bg-card); border: 1px solid var(--border);
-            border-radius: 12px; overflow: hidden;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+            transition: border-color .15s;
         }
+        .st-rcard:hover { border-color: #333; }
+
+        /* Gekleurde linker accent-rand per type */
+        .st-rcard[data-cat="daily"]  { border-left: 3px solid #1d4ed8; }
+        .st-rcard[data-cat="weekly"] { border-left: 3px solid #7c3aed; }
+        .st-rcard[data-cat="deep"]   { border-left: 3px solid #0f766e; }
+
         .st-rcard-header {
-            width: 100%; padding: 14px; text-align: left;
+            width: 100%; padding: 18px 20px; text-align: left;
             background: none; border: none; cursor: pointer;
             display: flex; justify-content: space-between; align-items: flex-start;
             -webkit-tap-highlight-color: transparent;
         }
-        /* ── RAPPORTAGE KAARTEN ── */
-        .st-rcard-left { flex: 1; padding-right: 10px; min-width: 0; }
-        .st-rcard-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; flex-wrap: wrap; }
+        .st-rcard-left { flex: 1; padding-right: 12px; min-width: 0; }
+
+        .st-rcard-meta {
+            display: flex; align-items: center; gap: 8px;
+            margin-bottom: 10px; flex-wrap: wrap;
+        }
         .st-rbadge {
             font-size: 9px; font-weight: 700; text-transform: uppercase;
-            letter-spacing: .06em; padding: 2px 8px; border-radius: 4px;
+            letter-spacing: .08em; padding: 3px 9px; border-radius: 5px;
         }
-        .rbadge-daily   { background: rgba(29,78,216,.18); color: #60a5fa; border: 1px solid rgba(29,78,216,.3); }
-        .rbadge-weekly  { background: rgba(124,58,237,.18); color: #a78bfa; border: 1px solid rgba(124,58,237,.3); }
-        .rbadge-deep    { background: rgba(15,118,110,.18); color: #2dd4bf; border: 1px solid rgba(15,118,110,.3); }
-        .st-rcard-date { font-size: 10px; color: #4a5568; letter-spacing: .01em; }
+        .rbadge-daily  { background: rgba(29,78,216,.15); color: #60a5fa; border: 1px solid rgba(29,78,216,.25); }
+        .rbadge-weekly { background: rgba(124,58,237,.15); color: #a78bfa; border: 1px solid rgba(124,58,237,.25); }
+        .rbadge-deep   { background: rgba(15,118,110,.15); color: #2dd4bf; border: 1px solid rgba(15,118,110,.25); }
+
+        .st-rcard-date {
+            font-size: 10px; color: #4a5568; letter-spacing: .01em;
+            display: flex; align-items: center; gap: 4px;
+        }
+
         .st-rcard-title {
             font-family: var(--font-serif);
-            font-size: 16px; color: var(--ink); line-height: 1.25; margin-bottom: 6px;
+            font-size: 17px; color: var(--ink);
+            line-height: 1.3; margin-bottom: 8px;
         }
         .st-rcard-conclusie {
-            font-size: 11px; color: var(--ink-muted); line-height: 1.55;
+            font-size: 12px; color: #7a8491; line-height: 1.6;
             border-left: 2px solid #2a2e32; padding-left: 10px;
+            font-style: italic;
         }
         .st-rcard-intro {
-            font-size: 11px; color: #4a5568; line-height: 1.55; margin-top: 8px;
-            display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+            font-size: 11.5px; color: #5a6272; line-height: 1.6;
+            margin-top: 10px;
+            display: -webkit-box; -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical; overflow: hidden;
         }
+
         .st-chevron {
-            color: #4a5568; transition: transform .2s; flex-shrink: 0; margin-top: 2px;
+            color: #3a3e42; transition: transform .2s; flex-shrink: 0; margin-top: 4px;
             stroke: currentColor; fill: none; stroke-width: 2;
             stroke-linecap: round; stroke-linejoin: round;
         }
-        .st-chevron.open { transform: rotate(180deg); }
+        .st-chevron.open { transform: rotate(180deg); color: var(--ink); }
 
         .st-rcard-body {
-            display: none; padding: 0 16px 16px;
+            display: none;
+            padding: 0 20px 20px;
+            border-top: 1px solid var(--border);
+            animation: fadeInDown .15s ease;
         }
         .st-rcard-body.open { display: block; }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 
-        /* PDF-viewer */
+        /* ── PDF-viewer balk ── */
         .st-pdf-bar {
-            display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;
+            display: flex; gap: 8px; padding-top: 16px; flex-wrap: wrap;
+            align-items: center;
+        }
+        .st-pdf-bar-label {
+            font-size: 10px; color: #4a5568; font-weight: 500; margin-right: 4px;
         }
         .st-pdf-btn {
             display: inline-flex; align-items: center; gap: 6px;
             font-family: var(--font-sans); font-size: 12px; font-weight: 600;
-            padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer;
-            -webkit-tap-highlight-color: transparent; transition: opacity .15s;
+            padding: 9px 16px; border-radius: 9px; border: none; cursor: pointer;
+            -webkit-tap-highlight-color: transparent; transition: opacity .15s, background .15s;
+            text-decoration: none;
         }
-        .st-pdf-btn:hover { opacity: .85; }
-        .st-pdf-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .st-pdf-btn:hover { opacity: .82; }
+        .st-pdf-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
         .st-pdf-btn-show { background: var(--bg-card2); border: 1px solid var(--border); color: var(--ink-muted); }
-        .st-pdf-btn-show.active { color: var(--ink); border-color: #555; }
-        .st-pdf-btn-dl   { background: var(--accent); color: #fff; }
+        .st-pdf-btn-show.active { color: var(--ink); border-color: #444; background: #232830; }
+        .st-pdf-btn-dl { background: var(--accent); color: #fff; border: 1px solid transparent; }
 
         .st-pdf-frame-wrap {
             display: none; border-radius: 10px; overflow: hidden;
-            border: 1px solid var(--border);
+            border: 1px solid var(--border); margin-top: 14px;
+            box-shadow: 0 4px 20px rgba(0,0,0,.4);
         }
         .st-pdf-frame-wrap.open { display: block; }
-        .st-pdf-frame { width: 100%; height: 560px; border: none; background: #fff; }
+        .st-pdf-frame { width: 100%; height: 620px; border: none; background: #fff; }
 
         /* Skeleton loader */
         .st-skel {
@@ -1784,49 +1817,87 @@ function renderRapportCards(cat) {
     const gefilterd = cat === 'all' ? rappData : rappData.filter(r => r.type === cat);
 
     if (!gefilterd.length) {
-        const labels = { all: 'nog geen rapportages beschikbaar', daily: 'nog geen Daily Notes', weekly: 'nog geen Weekly Positioning', deep: 'nog geen Deep-Dives' };
-        container.innerHTML = `<div class="st-empty">📋 Er zijn ${labels[cat] || 'geen rapporten'} gevonden.<br><small style="color:#3a3e42">Rapporten worden automatisch gegenereerd via de dagelijkse cron.</small></div>`;
+        const labels = {
+            all:    'nog geen rapportages beschikbaar',
+            daily:  'nog geen Daily Strategy Notes',
+            weekly: 'nog geen Weekly Positioning rapporten',
+            deep:   'nog geen Deep-Dive rapporten',
+        };
+        container.innerHTML = `
+          <div class="st-empty" style="text-align:center;padding:40px 20px;">
+            <div style="font-size:28px;margin-bottom:12px;">📋</div>
+            <div style="font-size:14px;color:var(--ink-muted);margin-bottom:6px;">${labels[cat] || 'Geen rapporten gevonden'}</div>
+            <div style="font-size:11px;color:#3a3e42;line-height:1.6;">
+              Rapporten worden automatisch gegenereerd via de Vercel cron:<br>
+              <strong style="color:#444;">Daily</strong> ma–vr om 07:00 &nbsp;·&nbsp;
+              <strong style="color:#444;">Weekly &amp; Deep-Dive</strong> elke maandag om 07:00
+            </div>
+          </div>`;
         return;
     }
 
-    const typeLabel = { daily: 'Daily Strategy Note', weekly: 'Weekly Positioning & Structure', deep: 'Deep-Dive Strategic Research' };
+    const typeLabel = {
+        daily:  'Daily Strategy Note',
+        weekly: 'Weekly Positioning & Structure',
+        deep:   'Deep-Dive Strategic Research',
+    };
     const badgeClass = { daily: 'rbadge-daily', weekly: 'rbadge-weekly', deep: 'rbadge-deep' };
 
     container.innerHTML = gefilterd.map((r, i) => {
-        const id       = `rcard-${i}`;
-        const frameId  = `rframe-${i}`;
-        const barId    = `rbar-${i}`;
-        const showBtnId= `rshowbtn-${i}`;
-        const label    = typeLabel[r.type] || r.type;
-        const badge    = badgeClass[r.type] || '';
-        const htmlUrl  = r.htmlUrl || '';
+        const id        = `rcard-${i}`;
+        const frameId   = `rframe-${i}`;
+        const showBtnId = `rshowbtn-${i}`;
+        const label     = typeLabel[r.type] || r.type;
+        const badge     = badgeClass[r.type] || '';
+        const htmlUrl   = r.htmlUrl || '';
+
+        // Datum kort weergeven
+        let datumDisplay = r.datum || '';
+        if (r.datumISO) {
+            try {
+                datumDisplay = new Date(r.datumISO).toLocaleDateString('nl-NL', {
+                    day: 'numeric', month: 'long', year: 'numeric'
+                });
+            } catch {}
+        }
 
         return `<div class="st-rcard" data-cat="${r.type}">
-          <button class="st-rcard-header" onclick="stToggle('${id}','${id}-chv')">
+          <!-- KAART HEADER (klikbaar om uit te klappen) -->
+          <button class="st-rcard-header" onclick="stToggle('${id}','${id}-chv')" aria-expanded="false">
             <div class="st-rcard-left">
               <div class="st-rcard-meta">
                 <span class="st-rbadge ${badge}">${label}</span>
-                <span class="st-rcard-date">${r.datum || ''}</span>
+                <span class="st-rcard-date">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  ${datumDisplay}
+                </span>
               </div>
               <div class="st-rcard-title">${r.titel || '—'}</div>
               <div class="st-rcard-conclusie">${r.conclusie || ''}</div>
               ${r.intro ? `<div class="st-rcard-intro">${r.intro}</div>` : ''}
             </div>
-            <svg id="${id}-chv" class="st-chevron" width="20" height="20" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            <svg id="${id}-chv" class="st-chevron" width="18" height="18" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
+
+          <!-- KAART BODY (uitklapbaar) -->
           <div class="st-rcard-body" id="${id}">
-            <div class="st-pdf-bar" id="${barId}">
-              <button id="${showBtnId}" class="st-pdf-btn st-pdf-btn-show" onclick="togglePdfFrame('${frameId}','${showBtnId}','${htmlUrl}')">
+            <div class="st-pdf-bar">
+              <span class="st-pdf-bar-label">Rapport:</span>
+              <button id="${showBtnId}"
+                class="st-pdf-btn st-pdf-btn-show"
+                onclick="togglePdfFrame('${frameId}','${showBtnId}','${htmlUrl}')"
+                ${!htmlUrl ? 'disabled style="opacity:.4;cursor:not-allowed;"' : ''}>
                 <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                Toon rapport
+                <span>Toon PDF</span>
               </button>
-              <a href="${htmlUrl}" download class="st-pdf-btn st-pdf-btn-dl" style="text-decoration:none;">
+              ${htmlUrl ? `<a href="${htmlUrl}" download="DeAnalist_${r.type}_${r.datumISO || 'rapport'}.html"
+                class="st-pdf-btn st-pdf-btn-dl" style="text-decoration:none;">
                 <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Download
-              </a>
+                Download PDF
+              </a>` : `<span style="font-size:11px;color:#3a3e42;padding:4px 0;">Rapport niet beschikbaar</span>`}
             </div>
             <div class="st-pdf-frame-wrap" id="${frameId}">
-              <iframe class="st-pdf-frame" title="Rapport PDF"></iframe>
+              <iframe class="st-pdf-frame" title="Rapport — ${label} ${datumDisplay}"></iframe>
             </div>
           </div>
         </div>`;
@@ -1834,12 +1905,29 @@ function renderRapportCards(cat) {
 }
 
 function stToggle(bodyId, chvId) {
-    const body  = document.getElementById(bodyId);
-    const chv   = document.getElementById(chvId);
-    const isOpen = body.classList.contains('open');
-    document.querySelectorAll('.st-rcard-body').forEach(b => b.classList.remove('open'));
-    document.querySelectorAll('.st-chevron').forEach(c => c.classList.remove('open'));
-    if (!isOpen) { body.classList.add('open'); if (chv) chv.classList.add('open'); }
+    const body    = document.getElementById(bodyId);
+    const chv     = document.getElementById(chvId);
+    const btn     = body?.previousElementSibling; // de header-button
+    const isOpen  = body?.classList.contains('open');
+
+    // Sluit alle andere open kaarten
+    document.querySelectorAll('.st-rcard-body.open').forEach(b => {
+        if (b.id !== bodyId) {
+            b.classList.remove('open');
+            const c = document.getElementById(b.id.replace('rcard-', 'rcard-') + '-chv');
+            if (c) c.classList.remove('open');
+        }
+    });
+
+    if (isOpen) {
+        body.classList.remove('open');
+        if (chv) chv.classList.remove('open');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+    } else {
+        body.classList.add('open');
+        if (chv) chv.classList.add('open');
+        if (btn) btn.setAttribute('aria-expanded', 'true');
+    }
 }
 
 function togglePdfFrame(frameWrapId, btnId, url) {
@@ -1851,10 +1939,18 @@ function togglePdfFrame(frameWrapId, btnId, url) {
         const iframe = wrap.querySelector('iframe');
         if (iframe && !iframe.src) iframe.src = url;
         wrap.classList.add('open');
-        if (btn) { btn.classList.add('active'); btn.innerHTML = btn.innerHTML.replace('Toon rapport', 'Verberg rapport'); }
+        if (btn) {
+            btn.classList.add('active');
+            const span = btn.querySelector('span');
+            if (span) span.textContent = 'Verberg PDF';
+        }
     } else {
         wrap.classList.remove('open');
-        if (btn) { btn.classList.remove('active'); btn.innerHTML = btn.innerHTML.replace('Verberg rapport', 'Toon rapport'); }
+        if (btn) {
+            btn.classList.remove('active');
+            const span = btn.querySelector('span');
+            if (span) span.textContent = 'Toon PDF';
+        }
     }
 }
 
