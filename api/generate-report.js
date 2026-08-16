@@ -1,11 +1,12 @@
 // /api/generate-report.js
-// Genereert één strategie-rapport (daily / weekly / deep) via Gemini en slaat op in Vercel Blob.
-// Wordt aangeroepen door Vercel Cron of handmatig via POST.
+// Genereert één strategie-rapport (daily / weekly / deep) via Gemini 2.0 Flash
+// en slaat metadata + HTML op in Vercel Blob.
+// Wordt aangeroepen door Vercel Cron (GET) of handmatig (GET/POST).
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { put, list }          from '@vercel/blob';
 
-// ─── helpers ────────────────────────────────────────────────────────────────
+// ─── Yahoo Finance helpers ───────────────────────────────────────────────────
 
 const YF_BASE   = 'https://query1.finance.yahoo.com';
 const YF_BASE_2 = 'https://query2.finance.yahoo.com';
@@ -33,10 +34,10 @@ async function fetchQuote(symbol) {
 
 async function fetchMarktdata() {
     const syms = {
-        sp500: '^GSPC', nasdaq: '^IXIC', vix: '^VIX',
-        yield10y: '^TNX', yield2y: '^IRX',
-        dxy: 'DX-Y.NYB', oil: 'CL=F', gold: 'GC=F',
-        hyg: 'HYG', xlk: 'XLK', xlf: 'XLF', xle: 'XLE',
+        sp500:   '^GSPC',  nasdaq:   '^IXIC',  vix:      '^VIX',
+        yield10y:'^TNX',   yield2y:  '^IRX',
+        dxy:     'DX-Y.NYB', oil:    'CL=F',   gold:     'GC=F',
+        hyg:     'HYG',    xlk:      'XLK',    xlf:      'XLF',   xle: 'XLE',
     };
     const entries = await Promise.all(
         Object.entries(syms).map(async ([k, s]) => [k, await fetchQuote(s)])
@@ -44,175 +45,344 @@ async function fetchMarktdata() {
     return Object.fromEntries(entries.filter(([, v]) => v));
 }
 
-// ─── PDF-HTML template ───────────────────────────────────────────────────────
-
-function buildPdfHtml(type, content, datum) {
-    const typeLabels = {
-        daily:  { label: 'Daily Strategy Note',         kleur: '#1d4ed8' },
-        weekly: { label: 'Weekly Positioning & Structure', kleur: '#7c3aed' },
-        deep:   { label: 'Deep-Dive Strategic Research',  kleur: '#0f766e' },
-    };
-    const tl = typeLabels[type] || typeLabels.daily;
-
-    return `<!DOCTYPE html>
-<html lang="nl">
-<head>
-<meta charset="UTF-8">
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&display=swap');
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Georgia', serif;
-    background: #fff;
-    color: #1a202c;
-    font-size: 10.5px;
-    line-height: 1.6;
-  }
-  .page { width: 794px; padding: 40px 48px; margin: 0 auto; }
-
-  /* ── HEADER ── */
-  .rp-header {
-    border-bottom: 2px solid #0f172a;
-    padding-bottom: 12px;
-    margin-bottom: 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-  }
-  .rp-brand {
-    font-size: 7px; font-weight: 700; letter-spacing: 2.5px;
-    text-transform: uppercase; color: #C8311A; margin-bottom: 5px;
-    font-family: Arial, sans-serif;
-  }
-  .rp-title {
-    font-family: 'DM Serif Display', Georgia, serif;
-    font-size: 22px; color: #0f172a; line-height: 1.15; max-width: 520px;
-  }
-  .rp-meta { text-align: right; font-family: Arial, sans-serif; }
-  .rp-type-badge {
-    display: inline-block;
-    font-size: 7px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
-    padding: 2px 8px; border-radius: 3px; margin-bottom: 6px;
-    color: #fff;
-    background: ${tl.kleur};
-  }
-  .rp-datum { font-size: 8.5px; color: #64748b; line-height: 1.8; }
-
-  /* ── EXECUTIVE SUMMARY ── */
-  .rp-exec {
-    background: #f8fafc; border-left: 3px solid ${tl.kleur};
-    padding: 10px 14px; margin-bottom: 16px; border-radius: 0 4px 4px 0;
-  }
-  .rp-exec-lbl {
-    font-size: 7px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
-    color: ${tl.kleur}; margin-bottom: 4px; font-family: Arial, sans-serif;
-  }
-  .rp-exec-txt { font-size: 10px; color: #334155; line-height: 1.6; }
-
-  /* ── BODY ── */
-  .rp-section { margin-bottom: 14px; }
-  .rp-section-title {
-    font-size: 7.5px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 1px; color: #0f172a;
-    border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 8px;
-    font-family: Arial, sans-serif;
-  }
-  .rp-body { font-size: 10px; color: #334155; line-height: 1.7; text-align: justify; }
-  .rp-body p { margin-bottom: 9px; }
-  .rp-body strong { color: #0f172a; }
-
-  /* ── SCENARIO / DATA GRID ── */
-  .rp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
-  .rp-grid-card {
-    background: #f8fafc; border: 1px solid #e2e8f0;
-    border-radius: 4px; padding: 9px 11px;
-  }
-  .rp-grid-lbl { font-size: 8px; font-weight: 700; color: #0f172a; margin-bottom: 4px; font-family: Arial, sans-serif; }
-  .rp-grid-txt { font-size: 9px; color: #475569; line-height: 1.5; }
-
-  /* ── MARKTDATA STRIP ── */
-  .rp-strip {
-    display: grid; grid-template-columns: repeat(6, 1fr);
-    gap: 4px; background: #f1f5f9; padding: 7px; border-radius: 4px;
-    border: 1px solid #e2e8f0; margin-bottom: 14px; text-align: center;
-  }
-  .rp-strip-item {}
-  .rp-strip-lbl { font-size: 6px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; font-family: Arial, sans-serif; }
-  .rp-strip-val { font-size: 10px; font-weight: 700; color: #0f172a; }
-  .rp-strip-chg { font-size: 8px; font-weight: 600; }
-
-  /* ── DISCLAIMER ── */
-  .rp-disclaimer {
-    margin-top: 24px; padding-top: 10px;
-    border-top: 1px solid #e2e8f0;
-    font-size: 7.5px; color: #94a3b8; line-height: 1.5;
-    font-family: Arial, sans-serif;
-  }
-</style>
-</head>
-<body>
-<div class="page">
-  <!-- HEADER -->
-  <div class="rp-header">
-    <div>
-      <div class="rp-brand">DeAnalist · Research &amp; Strategy Division</div>
-      <div class="rp-title">${content.titel}</div>
-    </div>
-    <div class="rp-meta">
-      <div><span class="rp-type-badge">${tl.label}</span></div>
-      <div class="rp-datum">
-        Datum: <strong>${datum}</strong><br>
-        Vrijgegeven: 07:00 CET
-      </div>
-    </div>
-  </div>
-
-  ${content.marktstrip || ''}
-
-  <!-- EXECUTIVE SUMMARY -->
-  <div class="rp-exec">
-    <div class="rp-exec-lbl">Conclusie</div>
-    <div class="rp-exec-txt">${content.conclusie}</div>
-  </div>
-
-  ${content.secties}
-
-  <!-- DISCLAIMER -->
-  <div class="rp-disclaimer">
-    <strong>DeAnalist · Research &amp; Strategy Division</strong> — Dit rapport is uitsluitend informatief van aard en vormt op geen enkele wijze beleggingsadvies. Prognoses zijn gebaseerd op publiek beschikbare marktdata en AI-analyse. Raadpleeg een erkend beleggingsadviseur voor persoonlijk advies. © DeAnalist ${new Date().getFullYear()}
-  </div>
-</div>
-</body>
-</html>`;
-}
-
-// ─── marktstrip HTML ──────────────────────────────────────────────────────────
+// ─── Marktstrip HTML ─────────────────────────────────────────────────────────
 
 function marktStripHtml(markt) {
     if (!markt) return '';
     const items = [
-        { lbl: 'S&P 500', val: markt.sp500?.price?.toLocaleString('nl-NL', { minimumFractionDigits: 0 }), pct: markt.sp500?.chgPct },
-        { lbl: 'Nasdaq',  val: markt.nasdaq?.price?.toLocaleString('nl-NL', { minimumFractionDigits: 0 }), pct: markt.nasdaq?.chgPct },
-        { lbl: 'VIX',     val: markt.vix?.price?.toFixed(2), pct: markt.vix?.chgPct },
-        { lbl: '10Y',     val: markt.yield10y?.price?.toFixed(2) + '%', pct: markt.yield10y?.chgPct },
-        { lbl: 'DXY',     val: markt.dxy?.price?.toFixed(1), pct: markt.dxy?.chgPct },
-        { lbl: 'WTI',     val: '$' + markt.oil?.price?.toFixed(1), pct: markt.oil?.chgPct },
-    ].filter(i => i.val && i.val !== 'undefined%' && i.val !== 'undefined');
+        { lbl: 'S&P 500', val: markt.sp500?.price?.toLocaleString('nl-NL',   { minimumFractionDigits: 0 }), pct: markt.sp500?.chgPct },
+        { lbl: 'Nasdaq',  val: markt.nasdaq?.price?.toLocaleString('nl-NL',  { minimumFractionDigits: 0 }), pct: markt.nasdaq?.chgPct },
+        { lbl: 'VIX',     val: markt.vix?.price?.toFixed(2),                                                pct: markt.vix?.chgPct },
+        { lbl: '10Y',     val: markt.yield10y?.price?.toFixed(2) + '%',                                     pct: markt.yield10y?.chgPct },
+        { lbl: 'DXY',     val: markt.dxy?.price?.toFixed(1),                                                pct: markt.dxy?.chgPct },
+        { lbl: 'WTI',     val: '$' + markt.oil?.price?.toFixed(1),                                          pct: markt.oil?.chgPct },
+    ].filter(i => i.val && !i.val.startsWith('undefined'));
 
     const cells = items.map(i => {
         const pos = i.pct > 0, neg = i.pct < 0;
         const clr = pos ? '#16a34a' : neg ? '#dc2626' : '#64748b';
-        const pctStr = i.pct != null ? ` ${pos ? '+' : ''}${(+i.pct).toFixed(2)}%` : '';
+        const pctStr = i.pct != null ? `${pos ? '+' : ''}${(+i.pct).toFixed(2)}%` : '';
         return `<div class="rp-strip-item">
           <div class="rp-strip-lbl">${i.lbl}</div>
           <div class="rp-strip-val">${i.val}</div>
           <div class="rp-strip-chg" style="color:${clr}">${pctStr}</div>
         </div>`;
     }).join('');
+
     return `<div class="rp-strip">${cells}</div>`;
 }
 
-// ─── prompt builders ──────────────────────────────────────────────────────────
+// ─── Secties HTML ─────────────────────────────────────────────────────────────
+
+function sectiesToHtml(secties) {
+    return secties.map(s => `
+  <div class="rp-section">
+    <div class="rp-section-title">${s.titel}</div>
+    <div class="rp-body">${
+        s.inhoud.split('\n').filter(Boolean).map(p => `<p>${p}</p>`).join('')
+    }</div>
+  </div>`).join('');
+}
+
+// ─── Professionele PDF-HTML template ─────────────────────────────────────────
+
+function buildPdfHtml(type, content, datum) {
+    const typeConfig = {
+        daily:  { label: 'Daily Strategy Note',             kleur: '#1d4ed8', kleurLicht: '#eff6ff', kleurBorder: '#bfdbfe' },
+        weekly: { label: 'Weekly Positioning & Structure',  kleur: '#7c3aed', kleurLicht: '#f5f3ff', kleurBorder: '#ddd6fe' },
+        deep:   { label: 'Deep-Dive Strategic Research',    kleur: '#0f766e', kleurLicht: '#f0fdfa', kleurBorder: '#99f6e4' },
+    };
+    const tc = typeConfig[type] || typeConfig.daily;
+    const jaar = new Date().getFullYear();
+
+    return `<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeAnalist — ${tc.label} — ${datum}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600;700&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #ffffff;
+    color: #1a202c;
+    font-size: 11px;
+    line-height: 1.65;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    width: 794px;
+    min-height: 1123px;
+    margin: 0 auto;
+    padding: 0;
+    position: relative;
+  }
+
+  /* ── TOPBAR ── */
+  .rp-topbar {
+    background: #0f172a;
+    padding: 10px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .rp-topbar-brand {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 16px;
+    color: #ffffff;
+    letter-spacing: -0.3px;
+  }
+  .rp-topbar-brand span { color: #C8311A; }
+  .rp-topbar-division {
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #64748b;
+  }
+
+  /* ── TYPE BANNER ── */
+  .rp-banner {
+    background: ${tc.kleur};
+    padding: 6px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .rp-banner-type {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.9);
+  }
+  .rp-banner-datum {
+    font-size: 9px;
+    color: rgba(255,255,255,0.75);
+  }
+
+  /* ── CONTENT AREA ── */
+  .rp-content {
+    padding: 32px 48px 40px;
+  }
+
+  /* ── TITLE BLOCK ── */
+  .rp-title-block {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  .rp-eyebrow {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: ${tc.kleur};
+    margin-bottom: 8px;
+  }
+  .rp-title {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 26px;
+    color: #0f172a;
+    line-height: 1.2;
+    letter-spacing: -0.5px;
+    margin-bottom: 12px;
+    max-width: 580px;
+  }
+  .rp-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .rp-meta-item {
+    font-size: 9px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .rp-meta-item strong { color: #334155; font-weight: 600; }
+
+  /* ── MARKTSTRIP ── */
+  .rp-strip {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1px;
+    background: #e2e8f0;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 22px;
+  }
+  .rp-strip-item {
+    background: #f8fafc;
+    padding: 8px 10px;
+    text-align: center;
+  }
+  .rp-strip-lbl { font-size: 7px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+  .rp-strip-val { font-size: 11px; font-weight: 700; color: #0f172a; }
+  .rp-strip-chg { font-size: 9px; font-weight: 600; margin-top: 1px; }
+
+  /* ── CONCLUSIE BOX ── */
+  .rp-conclusie {
+    background: ${tc.kleurLicht};
+    border: 1px solid ${tc.kleurBorder};
+    border-left: 4px solid ${tc.kleur};
+    border-radius: 0 6px 6px 0;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .rp-conclusie-label {
+    font-size: 7.5px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: ${tc.kleur};
+    margin-bottom: 5px;
+  }
+  .rp-conclusie-text {
+    font-size: 11px;
+    color: #1e293b;
+    line-height: 1.6;
+    font-weight: 500;
+  }
+
+  /* ── SECTIES ── */
+  .rp-section {
+    margin-bottom: 18px;
+  }
+  .rp-section-title {
+    font-size: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #0f172a;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 5px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .rp-section-title::before {
+    content: '';
+    display: inline-block;
+    width: 3px;
+    height: 10px;
+    background: ${tc.kleur};
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .rp-body { font-size: 10.5px; color: #334155; line-height: 1.75; text-align: justify; }
+  .rp-body p { margin-bottom: 10px; }
+  .rp-body p:last-child { margin-bottom: 0; }
+  .rp-body strong { color: #0f172a; font-weight: 600; }
+
+  /* ── DIVIDER ── */
+  .rp-divider {
+    height: 1px;
+    background: #e2e8f0;
+    margin: 22px 0;
+  }
+
+  /* ── FOOTER ── */
+  .rp-footer {
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    padding: 14px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+  }
+  .rp-disclaimer {
+    font-size: 7.5px;
+    color: #94a3b8;
+    line-height: 1.5;
+    flex: 1;
+  }
+  .rp-disclaimer strong { color: #64748b; }
+  .rp-footer-logo {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 13px;
+    color: #94a3b8;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .rp-footer-logo span { color: #C8311A; }
+
+  @media print {
+    body { font-size: 10px; }
+    .page { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- TOPBAR -->
+  <div class="rp-topbar">
+    <div class="rp-topbar-brand">De<span>Analist</span></div>
+    <div class="rp-topbar-division">Research &amp; Strategy Division</div>
+  </div>
+
+  <!-- TYPE BANNER -->
+  <div class="rp-banner">
+    <div class="rp-banner-type">${tc.label}</div>
+    <div class="rp-banner-datum">Vrijgegeven 07:00 CET &nbsp;·&nbsp; ${datum}</div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="rp-content">
+
+    <!-- TITEL -->
+    <div class="rp-title-block">
+      <div class="rp-eyebrow">${tc.label}</div>
+      <div class="rp-title">${content.titel}</div>
+      <div class="rp-meta-row">
+        <div class="rp-meta-item">📅 <strong>${datum}</strong></div>
+        <div class="rp-meta-item">🕖 <strong>07:00 CET</strong></div>
+        <div class="rp-meta-item">📊 <strong>Marktdata: Live bij publicatie</strong></div>
+      </div>
+    </div>
+
+    <!-- MARKTSTRIP -->
+    ${content.marktstrip || ''}
+
+    <!-- CONCLUSIE -->
+    <div class="rp-conclusie">
+      <div class="rp-conclusie-label">Onze conclusie</div>
+      <div class="rp-conclusie-text">${content.conclusie}</div>
+    </div>
+
+    <!-- SECTIES -->
+    ${content.secties}
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="rp-footer">
+    <div class="rp-disclaimer">
+      <strong>Disclaimer:</strong> Dit rapport is uitsluitend informatief van aard en vormt op geen enkele wijze beleggingsadvies, aanbeveling of uitnodiging tot aan- of verkoop van financiële instrumenten.
+      Prognoses en analyses zijn gebaseerd op publiek beschikbare marktdata en AI-modeluitkomsten. Raadpleeg een erkend beleggingsadviseur voor persoonlijk advies. 
+      Verleden rendementen bieden geen garantie voor toekomstige resultaten. © DeAnalist ${jaar}
+    </div>
+    <div class="rp-footer-logo">De<span>Analist</span></div>
+  </div>
+
+</div>
+</body>
+</html>`;
+}
+
+// ─── Prompt builders ──────────────────────────────────────────────────────────
 
 function buildPrompt(type, marktStr, datum) {
     const basis = `Je bent een senior strateeg bij een institutioneel beleggingsresearchbureau (denk: Gavekal, BCA Research, Goldman Sachs Global Investment Research).
@@ -231,6 +401,7 @@ JSON-formaat:
 {
   "titel": "Prikkelende institutionele kop — max 12 woorden, geen clichés",
   "conclusie": "Onze directe aanbeveling in één zin, concreet en directioneel",
+  "intro": "Twee zinnen die de essentie van het rapport samenvatten — geschikt als preview op een kaart (max 240 tekens)",
   "secties": [
     {
       "titel": "Macro-achtergrond",
@@ -254,6 +425,7 @@ JSON-formaat:
 {
   "titel": "Prikkelende institutionele kop — max 12 woorden",
   "conclusie": "Onze wekelijkse strategische aanbeveling in één zin",
+  "intro": "Twee zinnen die de essentie samenvatten als preview (max 240 tekens)",
   "secties": [
     {
       "titel": "Waar zit geld klem?",
@@ -276,14 +448,14 @@ JSON-formaat:
 
     // deep-dive
     return basis + `
-TAAK: Schrijf een Deep-Dive Strategic Research rapport — een grondig thematisch onderzoek op basis van de huidige marktomstandigheden.
-
-Kies ZELF het meest relevante thema gezien de live marktdata (bijv. Fed-beleid, sectorrotatie, credit cycle, geopolitieke risico's, AI-capex, etc.)
+TAAK: Schrijf een Deep-Dive Strategic Research rapport — grondig thematisch onderzoek op basis van de huidige marktomstandigheden.
+Kies ZELF het meest relevante thema gezien de live marktdata.
 
 JSON-formaat:
 {
   "titel": "Institutionele thematitel — max 14 woorden, specifiek en prikkelend",
   "conclusie": "De centrale these in één krachtige zin",
+  "intro": "Twee zinnen die het thema en de kernboodschap samenvatten als preview (max 240 tekens)",
   "secties": [
     {
       "titel": "De Centrale These",
@@ -309,24 +481,26 @@ JSON-formaat:
 }`;
 }
 
-// ─── sectie-HTML builder ──────────────────────────────────────────────────────
+// ─── Duplicate guard ──────────────────────────────────────────────────────────
 
-function sectiesToHtml(secties) {
-    return secties.map(s => `
-  <div class="rp-section">
-    <div class="rp-section-title">${s.titel}</div>
-    <div class="rp-body">${s.inhoud.split('\n').filter(Boolean).map(p => `<p>${p}</p>`).join('')}</div>
-  </div>`).join('');
+async function rapportBestaatAl(type, datumISO, token) {
+    try {
+        const { blobs } = await list({
+            prefix: `strategie-rapporten/${type}/${datumISO}`,
+            token,
+        });
+        return blobs.some(b => b.pathname.endsWith('.json'));
+    } catch { return false; }
 }
 
-// ─── main handler ─────────────────────────────────────────────────────────────
+// ─── Main handler ─────────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     if (req.method === 'OPTIONS') return res.status(200).end();
 
-    // Cron en POST allebei toegestaan — cron stuurt GET
     const type = (req.query.type || req.body?.type || 'daily').toLowerCase();
     if (!['daily', 'weekly', 'deep'].includes(type)) {
         return res.status(400).json({ error: 'Ongeldig type. Gebruik: daily, weekly, deep.' });
@@ -337,52 +511,69 @@ export default async function handler(req, res) {
     if (!geminiKey) return res.status(500).json({ error: 'GEMINI_API_KEY ontbreekt.' });
     if (!blobToken) return res.status(500).json({ error: 'BLOB_READ_WRITE_TOKEN ontbreekt.' });
 
-    try {
-        const markt  = await fetchMarktdata();
-        const datum  = new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-        const datumISO = new Date().toISOString().slice(0, 10);
+    // ── Datum in Belgische tijd ──
+    const now = new Date();
+    const datumISO = now.toLocaleDateString('sv-SE', { timeZone: 'Europe/Brussels' }); // 'YYYY-MM-DD'
+    const datum    = now.toLocaleDateString('nl-NL', {
+        timeZone: 'Europe/Brussels',
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    });
 
-        // ── Gemini generatie ──
-        const genAI  = new GoogleGenerativeAI(geminiKey);
-        const model  = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
+    try {
+        // ── Duplicate guard — niet twee keer per dag genereren ──
+        const forceRegen = req.query.force === '1' || req.body?.force === true;
+        if (!forceRegen) {
+            const bestaat = await rapportBestaatAl(type, datumISO, blobToken);
+            if (bestaat) {
+                return res.status(200).json({
+                    success: true, skipped: true,
+                    message: `Rapport ${type} voor ${datumISO} bestaat al.`,
+                });
+            }
+        }
+
+        // ── Marktdata ophalen ──
+        const markt    = await fetchMarktdata();
         const marktStr = JSON.stringify(markt, null, 2);
+
+        // ── Gemini 2.0 Flash generatie ──
+        const genAI  = new GoogleGenerativeAI(geminiKey);
+        const model  = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
         const result = await model.generateContent(buildPrompt(type, marktStr, datum));
         const raw    = result.response.text().replace(/```json|```/g, '').trim();
         const parsed = JSON.parse(raw);
 
-        // ── PDF-HTML samenstellen ──
+        // ── HTML samenstellen ──
         const strip   = marktStripHtml(markt);
-        const secties = sectiesToHtml(parsed.secties || []);
+        const sectiesHtml = sectiesToHtml(parsed.secties || []);
         const pdfHtml = buildPdfHtml(type, {
             titel:      parsed.titel,
             conclusie:  parsed.conclusie,
-            secties,
+            secties:    sectiesHtml,
             marktstrip: strip,
         }, datum);
 
-        // ── Metadata opslaan als JSON in Blob ──
+        // ── Metadata object ──
         const meta = {
             type,
-            titel:     parsed.titel,
-            conclusie: parsed.conclusie,
+            titel:      parsed.titel,
+            conclusie:  parsed.conclusie,
             datum,
             datumISO,
             aangemaakt: new Date().toISOString(),
-            // Eerste sectie als intro-preview voor de kaart
-            intro: (parsed.secties?.[0]?.inhoud || '').slice(0, 280).trim() + '…',
+            intro:      (parsed.intro || parsed.secties?.[0]?.inhoud || '').slice(0, 240).trim() + '…',
         };
 
         const metaPath = `strategie-rapporten/${type}/${datumISO}.json`;
         const htmlPath = `strategie-rapporten/${type}/${datumISO}.html`;
 
-        // PDF-HTML opslaan
+        // ── Opslaan in Blob ──
         await put(htmlPath, pdfHtml, {
             access: 'public', token: blobToken,
             addRandomSuffix: false, contentType: 'text/html',
         });
-        // Metadata opslaan
-        await put(metaPath, JSON.stringify(meta), {
+        await put(metaPath, JSON.stringify(meta, null, 2), {
             access: 'public', token: blobToken,
             addRandomSuffix: false, contentType: 'application/json',
         });
