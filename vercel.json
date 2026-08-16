@@ -4,12 +4,27 @@
     { "source": "/(.*)",       "destination": "/index.html" }
   ],
   "functions": {
-    "api/financials.js": { "maxDuration": 15 },
-    "api/peers.js":      { "maxDuration": 15 },
-    "api/ai.js":         { "maxDuration": 60 },
-    "api/strategy.js":   { "maxDuration": 60 },
-    "api/reports.js":    { "maxDuration": 15 }
+    "api/financials.js":      { "maxDuration": 15 },
+    "api/peers.js":           { "maxDuration": 15 },
+    "api/ai.js":              { "maxDuration": 60 },
+    "api/strategy.js":        { "maxDuration": 60 },
+    "api/reports.js":         { "maxDuration": 15 },
+    "api/generate-report.js": { "maxDuration": 60 }
   },
+  "crons": [
+    {
+      "path": "/api/generate-report?type=daily",
+      "schedule": "0 6 * * 1-5"
+    },
+    {
+      "path": "/api/generate-report?type=weekly",
+      "schedule": "0 6 * * 1"
+    },
+    {
+      "path": "/api/generate-report?type=deep",
+      "schedule": "0 6 * * 1"
+    }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",
