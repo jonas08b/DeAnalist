@@ -3,7 +3,7 @@
 // Dagelijkse server-side cache via Vercel Blob
 
 import { callAI, parseJsonResponse } from './_ai-helper.js';
-import { put }                        from '@vercel/blob';
+import { put, head }                  from '@vercel/blob';
 
 const YF_BASE   = 'https://query1.finance.yahoo.com';
 const YF_BASE_2 = 'https://query2.finance.yahoo.com';
@@ -15,10 +15,13 @@ function cacheKey() {
     return `strategie-cache/regime-${d}.json`;
 }
 
-async function readCache() {
+async function readCache(token) {
     try {
-        const url = `https://${process.env.BLOB_STORE_ID}.public.blob.vercel-storage.com/${cacheKey()}`;
-        const res = await fetch(url);
+        // Gebruik @vercel/blob head() om de publieke URL op te halen —
+        // voorkomt afhankelijkheid van BLOB_STORE_ID env-var.
+        const blob = await head(cacheKey(), { token });
+        if (!blob?.url) return null;
+        const res = await fetch(blob.url);
         if (!res.ok) return null;
         return await res.json();
     } catch { return null; }
