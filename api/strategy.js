@@ -1,7 +1,9 @@
-// /api/strategy.js — Vercel Serverless Function
-// Marktregime-analyse met dagelijkse server-side cache via Vercel Blob
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { put, head }          from '@vercel/blob';
+// api/strategy.js — Marktregime-analyse
+// Primair: Gemini 3.5 Flash  |  Fallback: Groq llama-3.3-70b-versatile
+// Dagelijkse server-side cache via Vercel Blob
+
+import { callAI, parseJsonResponse } from './_ai-helper.js';
+import { put }                        from '@vercel/blob';
 
 const YF_BASE   = 'https://query1.finance.yahoo.com';
 const YF_BASE_2 = 'https://query2.finance.yahoo.com';
@@ -13,7 +15,7 @@ function cacheKey() {
     return `strategie-cache/regime-${d}.json`;
 }
 
-async function readCache(token) {
+async function readCache() {
     try {
         const url = `https://${process.env.BLOB_STORE_ID}.public.blob.vercel-storage.com/${cacheKey()}`;
         const res = await fetch(url);
@@ -82,14 +84,15 @@ export default async function handler(req, res) {
     if (req.method === 'OPTIONS') return res.status(200).end();
 
     const geminiKey = process.env.GEMINI_API_KEY;
+    const groqKey   = process.env.GROQ_API_KEY;
     const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
 
     if (!geminiKey) return res.status(500).json({ error: 'GEMINI_API_KEY ontbreekt.' });
 
     try {
-        // ── 1. Controleer Blob-cache ───────────────────────────────────────
+        // ── 1. Controleer Blob-cache ──────────────────────────────────────
         if (blobToken) {
-            const cached = await readCache(blobToken);
+            const cached = await readCache();
             if (cached) {
                 return res.status(200).json({ ...cached, _cached: true });
             }
@@ -108,10 +111,7 @@ export default async function handler(req, res) {
             yieldCurveSpread: yieldSpread ? `${yieldSpread}%` : 'N/B',
         }, null, 2);
 
-        // ── 3. Gemini analyse ─────────────────────────────────────────────
-        const genAI = new GoogleGenerativeAI(geminiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite' });
-
+        // ── 3. AI-analyse (Gemini 3.5 Flash → Groq fallback) ─────────────
         const prompt = `Je bent een senior macro-strateeg bij een institutioneel beleggingsresearchbureau — denk Gavekal, BCA Research.
 Schrijf UITSLUITEND in het NEDERLANDS. Toon: opiniërend, zelfverzekerd, institutioneel. Geen retail-taal.
 
@@ -161,17 +161,18 @@ Geef je antwoord UITSLUITEND als geldig JSON. Geen markdown, geen extra tekst:
   }
 }`;
 
-        const result = await model.generateContent(prompt);
-        const raw    = result.response.text().replace(/```json|```/g, '').trim();
-        const parsed = JSON.parse(raw);
+        const { text, provider } = await callAI(prompt, { geminiKey, groqKey });
+        const parsed = parseJsonResponse(text);
 
         // Overschrijf marktdata met echte waarden (AI rondt soms af)
-        if (markt.sp500)    { parsed.marktdata.sp500    = { prijs: +markt.sp500.price.toFixed(2),    changePct: +markt.sp500.chgPct.toFixed(2) }; }
-        if (markt.nasdaq)   { parsed.marktdata.nasdaq   = { prijs: +markt.nasdaq.price.toFixed(2),   changePct: +markt.nasdaq.chgPct.toFixed(2) }; }
-        if (markt.vix)      { parsed.marktdata.vix      = { waarde: +markt.vix.price.toFixed(2),     changePct: +markt.vix.chgPct.toFixed(2) }; }
+        if (markt.sp500)    { parsed.marktdata.sp500    = { prijs: +markt.sp500.price.toFixed(2),     changePct: +markt.sp500.chgPct.toFixed(2) }; }
+        if (markt.nasdaq)   { parsed.marktdata.nasdaq   = { prijs: +markt.nasdaq.price.toFixed(2),    changePct: +markt.nasdaq.chgPct.toFixed(2) }; }
+        if (markt.vix)      { parsed.marktdata.vix      = { waarde: +markt.vix.price.toFixed(2),      changePct: +markt.vix.chgPct.toFixed(2) }; }
         if (markt.yield10y) { parsed.marktdata.yield10y = { waarde: +markt.yield10y.price.toFixed(2), changePct: +markt.yield10y.chgPct.toFixed(2) }; }
-        if (markt.dxy)      { parsed.marktdata.dxy      = { waarde: +markt.dxy.price.toFixed(2),     changePct: +markt.dxy.chgPct.toFixed(2) }; }
-        if (markt.oil)      { parsed.marktdata.oil      = { waarde: +markt.oil.price.toFixed(2),     changePct: +markt.oil.chgPct.toFixed(2) }; }
+        if (markt.dxy)      { parsed.marktdata.dxy      = { waarde: +markt.dxy.price.toFixed(2),      changePct: +markt.dxy.chgPct.toFixed(2) }; }
+        if (markt.oil)      { parsed.marktdata.oil      = { waarde: +markt.oil.price.toFixed(2),      changePct: +markt.oil.chgPct.toFixed(2) }; }
+
+        parsed._provider = provider;
 
         // ── 4. Sla op in Blob ─────────────────────────────────────────────
         if (blobToken) {
