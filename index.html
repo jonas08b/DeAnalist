@@ -447,64 +447,74 @@
             display: flex; justify-content: space-between; align-items: flex-start;
             -webkit-tap-highlight-color: transparent;
         }
-        .st-rcard-left { flex: 1; padding-right: 8px; }
-        .st-rcard-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+        /* ── RAPPORTAGE KAARTEN ── */
+        .st-rcard-left { flex: 1; padding-right: 10px; min-width: 0; }
+        .st-rcard-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; flex-wrap: wrap; }
         .st-rbadge {
             font-size: 9px; font-weight: 700; text-transform: uppercase;
-            letter-spacing: .06em; padding: 2px 7px; border-radius: 4px;
+            letter-spacing: .06em; padding: 2px 8px; border-radius: 4px;
         }
-        .rbadge-daily   { background: rgba(59,130,246,.15); color: #60a5fa; border: 1px solid rgba(59,130,246,.25); }
-        .rbadge-weekly  { background: rgba(167,139,250,.15); color: #a78bfa; border: 1px solid rgba(167,139,250,.25); }
-        .rbadge-deep    { background: rgba(14,165,233,.15); color: #38bdf8; border: 1px solid rgba(14,165,233,.25); }
-        .st-rcard-date { font-size: 10px; color: #4a5568; }
+        .rbadge-daily   { background: rgba(29,78,216,.18); color: #60a5fa; border: 1px solid rgba(29,78,216,.3); }
+        .rbadge-weekly  { background: rgba(124,58,237,.18); color: #a78bfa; border: 1px solid rgba(124,58,237,.3); }
+        .rbadge-deep    { background: rgba(15,118,110,.18); color: #2dd4bf; border: 1px solid rgba(15,118,110,.3); }
+        .st-rcard-date { font-size: 10px; color: #4a5568; letter-spacing: .01em; }
         .st-rcard-title {
             font-family: var(--font-serif);
-            font-size: 15px; font-weight: 700; color: var(--ink); line-height: 1.3; margin-bottom: 4px;
+            font-size: 16px; color: var(--ink); line-height: 1.25; margin-bottom: 6px;
         }
-        .st-rcard-desc {
-            font-size: 11px; color: var(--ink-muted); line-height: 1.5;
-            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        .st-rcard-conclusie {
+            font-size: 11px; color: var(--ink-muted); line-height: 1.55;
+            border-left: 2px solid #2a2e32; padding-left: 10px;
+        }
+        .st-rcard-intro {
+            font-size: 11px; color: #4a5568; line-height: 1.55; margin-top: 8px;
+            display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
         }
         .st-chevron {
-            font-size: 16px; color: #4a5568; transition: transform .2s; flex-shrink: 0; margin-top: 2px;
+            color: #4a5568; transition: transform .2s; flex-shrink: 0; margin-top: 2px;
+            stroke: currentColor; fill: none; stroke-width: 2;
+            stroke-linecap: round; stroke-linejoin: round;
         }
         .st-chevron.open { transform: rotate(180deg); }
 
         .st-rcard-body {
-            display: none; padding: 0 14px 14px;
-            border-top: 1px solid rgba(42,46,50,.8); padding-top: 12px;
+            display: none; padding: 0 16px 16px;
         }
         .st-rcard-body.open { display: block; }
 
-        /* Prognose block (daily) */
-        .st-prognose {
-            border-left: 2px solid #f6ad55; padding: 6px 10px;
-            background: rgba(246,173,85,.05); border-radius: 0 6px 6px 0; margin-bottom: 10px;
+        /* PDF-viewer */
+        .st-pdf-bar {
+            display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;
         }
-        .st-prognose-lbl { font-size: 10px; font-weight: 700; color: #f6ad55; margin-bottom: 3px; }
-        .st-prognose-txt { font-size: 11px; color: #cbd5e0; line-height: 1.5; }
-
-        /* Body text */
-        .st-body-txt { font-size: 11px; color: var(--ink-muted); line-height: 1.6; margin-bottom: 10px; }
-
-        /* 3-grid (weekly) */
-        .st-grid3 { display: grid; grid-template-columns: 1fr; gap: 6px; margin-bottom: 10px; }
-        .st-g3card {
-            background: var(--bg); border: 1px solid var(--border);
-            border-radius: 6px; padding: 8px 10px; font-size: 11px;
+        .st-pdf-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-family: var(--font-sans); font-size: 12px; font-weight: 600;
+            padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer;
+            -webkit-tap-highlight-color: transparent; transition: opacity .15s;
         }
-        .st-g3-lbl { font-weight: 700; display: block; margin-bottom: 3px; }
-        .st-g3-txt { color: var(--ink-muted); line-height: 1.4; }
+        .st-pdf-btn:hover { opacity: .85; }
+        .st-pdf-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .st-pdf-btn-show { background: var(--bg-card2); border: 1px solid var(--border); color: var(--ink-muted); }
+        .st-pdf-btn-show.active { color: var(--ink); border-color: #555; }
+        .st-pdf-btn-dl   { background: var(--accent); color: #fff; }
 
-        /* Download button */
-        .st-dl-btn {
-            display: flex; align-items: center; justify-content: center; gap: 6px;
-            width: 100%; padding: 9px; background: var(--accent); border: none;
-            border-radius: 8px; color: #fff; font-size: 12px; font-weight: 700;
-            cursor: pointer; margin-top: 4px; font-family: var(--font-sans);
-            transition: opacity .15s;
+        .st-pdf-frame-wrap {
+            display: none; border-radius: 10px; overflow: hidden;
+            border: 1px solid var(--border);
         }
-        .st-dl-btn:hover { opacity: .88; }
+        .st-pdf-frame-wrap.open { display: block; }
+        .st-pdf-frame { width: 100%; height: 560px; border: none; background: #fff; }
+
+        /* Skeleton loader */
+        .st-skel {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 16px; animation: stpulse 1.4s ease infinite;
+        }
+        .st-skel-line { background: var(--bg-card2); border-radius: 4px; margin-bottom: 8px; }
+        @keyframes stpulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+        /* Leeg-state */
+        .st-empty { text-align: center; padding: 40px 20px; font-size: 13px; color: var(--ink-muted); }
 
         /* ── STRATEGIE HEADER ── */
         .st-header {
@@ -1027,204 +1037,28 @@
     </div>
 
     <!-- RAPPORTAGES -->
-    <div class="st-section-title" style="margin-top:8px;">Rapportages</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;margin-bottom:10px;">
+      <div class="st-section-title" style="margin:0;">Rapportages</div>
+      <button onclick="loadRapporten(true)" style="background:none;border:none;color:#4a5568;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:var(--font-sans);padding:4px 6px;">
+        <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.47-4.07"/></svg>
+        Vernieuwen
+      </button>
+    </div>
 
     <div class="st-filter-row">
-      <button class="st-fbtn active" onclick="stFilter('all',this)">Alle</button>
-      <button class="st-fbtn" onclick="stFilter('daily',this)">Daily Strategy Notes</button>
-      <button class="st-fbtn" onclick="stFilter('weekly',this)">Weekly Positioning</button>
-      <button class="st-fbtn" onclick="stFilter('deep',this)">Deep-Dive</button>
+      <button class="st-fbtn active" data-cat="all"    onclick="stFilter('all',this)">Alle</button>
+      <button class="st-fbtn"        data-cat="daily"  onclick="stFilter('daily',this)">Daily Strategy</button>
+      <button class="st-fbtn"        data-cat="weekly" onclick="stFilter('weekly',this)">Weekly Positioning</button>
+      <button class="st-fbtn"        data-cat="deep"   onclick="stFilter('deep',this)">Deep-Dive</button>
     </div>
 
     <div class="st-cards" id="st-cards">
-
-      <!-- DAILY 1 -->
-      <div class="st-rcard" data-cat="daily">
-        <button class="st-rcard-header" onclick="stToggle('sr1')">
-          <div class="st-rcard-left">
-            <div class="st-rcard-meta">
-              <span class="st-rbadge rbadge-daily">Daily Strategy Note</span>
-              <span class="st-rcard-date">15 aug 2026 · Dagelijks</span>
-            </div>
-            <div class="st-rcard-title">Reële yields stijgen terwijl goud meeloopt — wat de consensus mist</div>
-            <div class="st-rcard-desc">Focus op het macro-event van de dag: de gelijktijdige stijging van 10Y reële yields en goud gekoppeld aan de huidige CFTC-positionering.</div>
-          </div>
-          <svg id="stchv-sr1" class="st-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </button>
-        <div class="st-rcard-body" id="sr1">
-          <div class="st-prognose">
-            <div class="st-prognose-lbl">Directe marktprognose</div>
-            <div class="st-prognose-txt">Overweging in inflatie-sensitieve aandelen en reële activa ten koste van traditionele duration-blootstelling bij opening.</div>
-          </div>
-          <div class="st-body-txt">De stijging van de 10-jaarsrente naar 4.70% in combinatie met een verzwakkende dollar (DXY -0.32%) bevestigt een reflatoire impuls. De consensus negeert de herprijzing van reële termijnpremies — goud loopt mee terwijl het historisch achterblijft bij stijgende reële yields.</div>
-          <button class="st-dl-btn" onclick="stDownloadPDF('sr1-pdf','Daily Strategy Note – 15 aug 2026')">
-            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            Download volledig rapport (PDF)
-          </button>
-          <div id="sr1-pdf" style="display:none;">
-            <h2>Daily Strategy Note — 15 aug 2026</h2>
-            <h3>Reële yields stijgen terwijl goud meeloopt</h3>
-            <p><strong>Directe marktprognose:</strong> Overweging in inflatie-sensitieve aandelen en reële activa ten koste van traditionele duration-blootstelling bij opening.</p>
-            <p>De stijging van de 10-jaarsrente naar 4.70% in combinatie met een verzwakkende dollar (DXY -0.32%) bevestigt een reflatoire impuls. De consensus negeert de herprijzing van reële termijnpremies — goud loopt mee terwijl het historisch achterblijft bij stijgende reële yields.</p>
-            <p>Macro-achtergrond: De Federal Reserve houdt de rente stabiel, maar de markt prijst een hogere neutrale rente in. Inflatieverwachtingen (breakeven 10Y: 2.45%) stijgen sneller dan nominale yields. CFTC-data toont leveraged funds netto-long goud op het 82e percentiel. Een kleine sell-off (&lt;2%) kan een cascade van stop-losses triggeren.</p>
-            <p><em>Dit rapport is uitsluitend informatief en vormt geen beleggingsadvies. DeAnalist — Research Department.</em></p>
-          </div>
-        </div>
+      <!-- dynamisch geladen via loadRapporten() -->
+      <div class="st-skel" id="st-rapp-skel" style="margin-bottom:10px;">
+        <div class="st-skel-line" style="height:10px;width:40%;margin-bottom:10px;"></div>
+        <div class="st-skel-line" style="height:15px;width:80%;margin-bottom:8px;"></div>
+        <div class="st-skel-line" style="height:11px;width:65%;"></div>
       </div>
-
-      <!-- WEEKLY 1 -->
-      <div class="st-rcard" data-cat="weekly">
-        <button class="st-rcard-header" onclick="stToggle('sr2')">
-          <div class="st-rcard-left">
-            <div class="st-rcard-meta">
-              <span class="st-rbadge rbadge-weekly">Weekly Positioning &amp; Structure</span>
-              <span class="st-rcard-date">12 aug 2026 · Wekelijks</span>
-            </div>
-            <div class="st-rcard-title">Gevaarlijk 'vol': crowded trades in tech &amp; squeeze-risico's</div>
-            <div class="st-rcard-desc">Waar zit het grote geld klem? Waar dreigt paniek en naar welke sectoren stroomt het kapitaal?</div>
-          </div>
-          <svg id="stchv-sr2" class="st-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </button>
-        <div class="st-rcard-body" id="sr2">
-          <div class="st-grid3">
-            <div class="st-g3card">
-              <span class="st-g3-lbl" style="color:#f87171;">① Waar zit geld klem?</span>
-              <span class="st-g3-txt">Leveraged funds op 94e percentiel long in Nasdaq futures. Semiconductors zijn gevaarlijk 'vol' — elke macro-tegenvaller triggert gedwongen liquidatie.</span>
-            </div>
-            <div class="st-g3card">
-              <span class="st-g3-lbl" style="color:#f6ad55;">② Waar dreigt paniek?</span>
-              <span class="st-g3-txt">High Yield kredietspreads verruimen (+12bps week-op-week). Een kleine tegenvaller op CPI triggert short squeeze in bonds en uitverkoop in high-beta tech.</span>
-            </div>
-            <div class="st-g3card">
-              <span class="st-g3-lbl" style="color:#4ade80;">③ Waar stroomt geld heen?</span>
-              <span class="st-g3-txt">Rotatie versnelt uit Hardware/Semis richting Software SaaS en energie-infrastructuur. Defensieve groeiers zien institutionele instroom.</span>
-            </div>
-          </div>
-          <button class="st-dl-btn" onclick="stDownloadPDF('sr2-pdf','Weekly Positioning – 12 aug 2026')">
-            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            Download volledig rapport (PDF)
-          </button>
-          <div id="sr2-pdf" style="display:none;">
-            <h2>Weekly Positioning &amp; Structure — 12 aug 2026</h2>
-            <h3>Gevaarlijk vol: crowded trades in tech &amp; squeeze-risicos</h3>
-            <p><strong>① Waar zit het grote geld klem?</strong> Leveraged funds zitten op het 94e percentiel long in Nasdaq futures — het hoogste niveau since maart 2024. Semiconductors zijn gevaarlijk vol gepositioneerd, wat betekent dat elke macro-tegenvaller gedwongen liquidatie kan triggeren.</p>
-            <p><strong>② Waar dreigt paniek?</strong> High Yield kredietspreads verruimen met +12bps week-op-week naar 385bps. Een CPI-verrassing of zwak NFP-rapport is voldoende om een short squeeze in staatsobligaties te triggeren en een sell-off in high-beta tech te veroorzaken.</p>
-            <p><strong>③ Waar stroomt geld naartoe?</strong> Institutionele rotatie versnelt uit Hardware en Semiconductors richting Software SaaS en energie-infrastructuur. Defensieve groeiers en nutsbedrijven zien consistent institutionele instroom de afgelopen drie weken.</p>
-            <p><em>Dit rapport is uitsluitend informatief en vormt geen beleggingsadvies. DeAnalist — Research Department.</em></p>
-          </div>
-        </div>
-      </div>
-
-      <!-- DEEP-DIVE 1 -->
-      <div class="st-rcard" data-cat="deep">
-        <button class="st-rcard-header" onclick="stToggle('sr3')">
-          <div class="st-rcard-left">
-            <div class="st-rcard-meta">
-              <span class="st-rbadge rbadge-deep">Deep-Dive Strategic Research</span>
-              <span class="st-rcard-date">8 aug 2026 · Thema-analyse</span>
-            </div>
-            <div class="st-rcard-title">De AI-investeringscyclus fase II: hyperscaler capex vs. free cash flow</div>
-            <div class="st-rcard-desc">Structurele vergelijkende studie van FCF-kwaliteit, RPO en kapitaalallocatie tussen Microsoft, Alphabet, Meta en Amazon.</div>
-          </div>
-          <svg id="stchv-sr3" class="st-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </button>
-        <div class="st-rcard-body" id="sr3">
-          <div class="st-body-txt">Uitgebreide thema-analyse over de verschuiving van GPU-infrastructuur naar de monetisatiefase. De vier grote hyperscalers investeren gezamenlijk &gt;$220mrd in AI-capex in 2026, maar FCF-dekking en RPO-kwaliteit divergeren sterk. Microsoft leidt op RPO-dekking (2.3x), Meta op FCF-conversie (38%), Alphabet op margeverbetering.</div>
-          <div class="st-body-txt">Kernvraag: wie kan capex volhouden zonder FCF te beschadigen als monetisatie later aankomt dan de markt verwacht? Dit rapport bevat comparatieve matrices, DCF-gevoeligheidsanalyses en een positioneringsmatrix per hyperscaler.</div>
-          <button class="st-dl-btn" onclick="stDownloadPDF('sr3-pdf','Deep-Dive – AI-investeringscyclus fase II')">
-            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            Download volledig rapport (PDF)
-          </button>
-          <div id="sr3-pdf" style="display:none;">
-            <h2>Deep-Dive Strategic Research — 8 aug 2026</h2>
-            <h3>De AI-investeringscyclus fase II: hyperscaler capex vs. free cash flow</h3>
-            <p>De vier grote hyperscalers investeren gezamenlijk meer dan $220 miljard in AI-gerelateerde infrastructuur in 2026. De FCF-kwaliteit en RPO-dekking divergeren sterk.</p>
-            <p><strong>Microsoft:</strong> Capex $75mrd | FCF-marge 34% | RPO-dekking 2.3x — Sterkste combinatie capex + monetisatie via Azure/M365 Copilot.</p>
-            <p><strong>Alphabet:</strong> Capex $58mrd | FCF-marge 28% | RPO-dekking 1.6x — Zoekmoat-compressie als AI-antwoorden click-throughs verminderen is kernrisico.</p>
-            <p><strong>Meta:</strong> Capex $48mrd | FCF-marge 38% | Hoogste FCF-conversie, maar afhankelijk van reclame-conjunctuur voor capex-financiering.</p>
-            <p><strong>Amazon:</strong> Capex $85mrd | FCF-marge 16% | RPO-dekking 1.9x — AWS-RPO sterk, maar retail-segment drukt groepsmarges.</p>
-            <p><strong>Conclusie:</strong> De tijdlijn voor FCF-herstel bij Amazon en Alphabet is realistischer 12-18 maanden later dan consensus verwacht. Microsoft en Meta bieden de sterkste risico/rendements-verhouding.</p>
-            <p><em>Dit rapport is uitsluitend informatief en vormt geen beleggingsadvies. DeAnalist — Research Department.</em></p>
-          </div>
-        </div>
-      </div>
-
-      <!-- DAILY 2 -->
-      <div class="st-rcard" data-cat="daily">
-        <button class="st-rcard-header" onclick="stToggle('sr4')">
-          <div class="st-rcard-left">
-            <div class="st-rcard-meta">
-              <span class="st-rbadge rbadge-daily">Daily Strategy Note</span>
-              <span class="st-rcard-date">14 aug 2026 · Dagelijks</span>
-            </div>
-            <div class="st-rcard-title">CPI-dag: hoe positioneer je je vóór de print?</div>
-            <div class="st-rcard-desc">Tactische voorbereiding op het CPI-rapport: scenario-analyse voor bullish en bearish verrassingen en de bijbehorende marktreacties.</div>
-          </div>
-          <svg id="stchv-sr4" class="st-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </button>
-        <div class="st-rcard-body" id="sr4">
-          <div class="st-prognose">
-            <div class="st-prognose-lbl">Directe marktprognose</div>
-            <div class="st-prognose-txt">Neutrale positionering vóór de print. Bij CPI ≤3.0% YoY: overweeg duration en groeiaandelen. Bij CPI ≥3.4%: defensief draaien naar energie en commodity producers.</div>
-          </div>
-          <div class="st-body-txt">Consensus verwacht 3.1% YoY op kern-CPI. De opties-markt prijst een ±0.8% move in S&P 500 in. Historisch is de werkelijke move bij CPI-verrassingen 1.4x de geïmpliceerde move — opties onderprijzen het staartrisico systematisch.</div>
-          <button class="st-dl-btn" onclick="stDownloadPDF('sr4-pdf','Daily Strategy Note – 14 aug 2026')">
-            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            Download volledig rapport (PDF)
-          </button>
-          <div id="sr4-pdf" style="display:none;">
-            <h2>Daily Strategy Note — 14 aug 2026</h2>
-            <h3>CPI-dag: hoe positioneer je je voor de print?</h3>
-            <p><strong>Directe marktprognose:</strong> Neutrale positionering voor de print. Bij CPI 3.0% of lager: overweeg duration en groeiaandelen. Bij CPI 3.4% of hoger: defensief draaien naar energie en commodity producers.</p>
-            <p>Consensus verwacht 3.1% YoY op kern-CPI. Scenario A (laag): Fed-easing verwachting stijgt, 10Y yield daalt richting 4.40%, groei- en tech-aandelen outperformen. Scenario B (inline): beperkte marktreactie, bestaande trends zetten door. Scenario C (hoog): dollar stijgt, obligaties dalen, energie en defensieve waarden winnen.</p>
-            <p><em>Dit rapport is uitsluitend informatief en vormt geen beleggingsadvies. DeAnalist — Research Department.</em></p>
-          </div>
-        </div>
-      </div>
-
-      <!-- WEEKLY 2 -->
-      <div class="st-rcard" data-cat="weekly">
-        <button class="st-rcard-header" onclick="stToggle('sr5')">
-          <div class="st-rcard-left">
-            <div class="st-rcard-meta">
-              <span class="st-rbadge rbadge-weekly">Weekly Positioning &amp; Structure</span>
-              <span class="st-rcard-date">5 aug 2026 · Wekelijks</span>
-            </div>
-            <div class="st-rcard-title">Semiconductors → Software: de rotatie die institutionelen al doen</div>
-            <div class="st-rcard-desc">Sectorflows, relatieve sterkte en waarom de hardware-cyclus zijn piek mogelijk al heeft bereikt.</div>
-          </div>
-          <svg id="stchv-sr5" class="st-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </button>
-        <div class="st-rcard-body" id="sr5">
-          <div class="st-grid3">
-            <div class="st-g3card">
-              <span class="st-g3-lbl" style="color:#f87171;">① Klem in hardware</span>
-              <span class="st-g3-txt">Semi-aandelen (SOX) op 28x forward P/E na run van +140% in 18 maanden. Book-to-bill ratio's dalen voor het tweede kwartaal op rij — historisch vroeg warningssignaal.</span>
-            </div>
-            <div class="st-g3card">
-              <span class="st-g3-lbl" style="color:#f6ad55;">② Dreigende catalysts</span>
-              <span class="st-g3-txt">NVIDIA Q3 guidance-moment in september. Elke capex-vertraging bij hyperscalers raakt GPU-orders direct en cascadeert door de supply chain.</span>
-            </div>
-            <div class="st-g3card">
-              <span class="st-g3-lbl" style="color:#4ade80;">③ Software als veilige haven</span>
-              <span class="st-g3-txt">SaaS met ARR-groei &gt;20% en FCF positief op laagste relatieve waardering in drie jaar. Institutionelen roteren naar recurring revenue met lage capex-intensiteit.</span>
-            </div>
-          </div>
-          <button class="st-dl-btn" onclick="stDownloadPDF('sr5-pdf','Weekly Positioning – 5 aug 2026')">
-            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            Download volledig rapport (PDF)
-          </button>
-          <div id="sr5-pdf" style="display:none;">
-            <h2>Weekly Positioning &amp; Structure — 5 aug 2026</h2>
-            <h3>Semiconductors naar Software: de rotatie die institutionelen al doen</h3>
-            <p>Semi-aandelen (SOX-index) handelen op 28x forward P/E na een run van +140% in 18 maanden. Book-to-bill ratio's dalen voor het tweede kwartaal op rij — historisch een betrouwbaar vroeg signaal van een cyclische vertraging.</p>
-            <p>NVIDIA's Q3 guidance-moment in september is de hoogste risico-event van Q3. Elke signalering van vertraagde hyperscaler-orders raakt GPU-orderboeken direct en cascadeert door de hardware supply chain.</p>
-            <p>Software SaaS-bedrijven met ARR-groei boven 20% en positieve FCF handelen op de laagste relatieve waardering ten opzichte van hardware in drie jaar. Institutionelen roteren naar recurring revenue, hoge bruto-marges en lage capex-intensiteit.</p>
-            <p><em>Dit rapport is uitsluitend informatief en vormt geen beleggingsadvies. DeAnalist — Research Department.</em></p>
-          </div>
-        </div>
-      </div>
-
     </div><!-- /st-cards -->
   </div>
 </div><!-- /tab-strategie -->
@@ -1908,50 +1742,127 @@ async function loadStrategie() {
 }
 
 /* Report cards: toggle, filter, PDF download */
-function stToggle(id) {
-    const body = document.getElementById(id);
-    const chv  = document.getElementById('stchv-' + id);
+/* ── RAPPORTAGES ──────────────────────────────────────────────────────── */
+
+let rappActiefFilter = 'all';
+let rappData = [];
+
+async function loadRapporten(force = false) {
+    const container = document.getElementById('st-cards');
+    if (!container) return;
+
+    // Skeleton tonen
+    container.innerHTML = `
+      <div class="st-skel" style="margin-bottom:10px;">
+        <div class="st-skel-line" style="height:10px;width:40%;margin-bottom:10px;"></div>
+        <div class="st-skel-line" style="height:15px;width:80%;margin-bottom:8px;"></div>
+        <div class="st-skel-line" style="height:11px;width:65%;"></div>
+      </div>
+      <div class="st-skel" style="margin-bottom:10px;">
+        <div class="st-skel-line" style="height:10px;width:30%;margin-bottom:10px;"></div>
+        <div class="st-skel-line" style="height:15px;width:75%;margin-bottom:8px;"></div>
+        <div class="st-skel-line" style="height:11px;width:55%;"></div>
+      </div>`;
+
+    try {
+        const res  = await fetch('/api/reports');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Ophalen mislukt.');
+        rappData = Array.isArray(data) ? data : [];
+    } catch (e) {
+        container.innerHTML = `<div class="st-empty">⚠ Kon rapportages niet laden.<br><small style="color:#3a3e42">${e.message}</small></div>`;
+        return;
+    }
+
+    renderRapportCards(rappActiefFilter);
+}
+
+function renderRapportCards(cat) {
+    const container = document.getElementById('st-cards');
+    if (!container) return;
+
+    const gefilterd = cat === 'all' ? rappData : rappData.filter(r => r.type === cat);
+
+    if (!gefilterd.length) {
+        const labels = { all: 'nog geen rapportages beschikbaar', daily: 'nog geen Daily Notes', weekly: 'nog geen Weekly Positioning', deep: 'nog geen Deep-Dives' };
+        container.innerHTML = `<div class="st-empty">📋 Er zijn ${labels[cat] || 'geen rapporten'} gevonden.<br><small style="color:#3a3e42">Rapporten worden automatisch gegenereerd via de dagelijkse cron.</small></div>`;
+        return;
+    }
+
+    const typeLabel = { daily: 'Daily Strategy Note', weekly: 'Weekly Positioning & Structure', deep: 'Deep-Dive Strategic Research' };
+    const badgeClass = { daily: 'rbadge-daily', weekly: 'rbadge-weekly', deep: 'rbadge-deep' };
+
+    container.innerHTML = gefilterd.map((r, i) => {
+        const id       = `rcard-${i}`;
+        const frameId  = `rframe-${i}`;
+        const barId    = `rbar-${i}`;
+        const showBtnId= `rshowbtn-${i}`;
+        const label    = typeLabel[r.type] || r.type;
+        const badge    = badgeClass[r.type] || '';
+        const htmlUrl  = r.htmlUrl || '';
+
+        return `<div class="st-rcard" data-cat="${r.type}">
+          <button class="st-rcard-header" onclick="stToggle('${id}','${id}-chv')">
+            <div class="st-rcard-left">
+              <div class="st-rcard-meta">
+                <span class="st-rbadge ${badge}">${label}</span>
+                <span class="st-rcard-date">${r.datum || ''}</span>
+              </div>
+              <div class="st-rcard-title">${r.titel || '—'}</div>
+              <div class="st-rcard-conclusie">${r.conclusie || ''}</div>
+              ${r.intro ? `<div class="st-rcard-intro">${r.intro}</div>` : ''}
+            </div>
+            <svg id="${id}-chv" class="st-chevron" width="20" height="20" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="st-rcard-body" id="${id}">
+            <div class="st-pdf-bar" id="${barId}">
+              <button id="${showBtnId}" class="st-pdf-btn st-pdf-btn-show" onclick="togglePdfFrame('${frameId}','${showBtnId}','${htmlUrl}')">
+                <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                Toon rapport
+              </button>
+              <a href="${htmlUrl}" download class="st-pdf-btn st-pdf-btn-dl" style="text-decoration:none;">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download
+              </a>
+            </div>
+            <div class="st-pdf-frame-wrap" id="${frameId}">
+              <iframe class="st-pdf-frame" title="Rapport PDF"></iframe>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+}
+
+function stToggle(bodyId, chvId) {
+    const body  = document.getElementById(bodyId);
+    const chv   = document.getElementById(chvId);
     const isOpen = body.classList.contains('open');
     document.querySelectorAll('.st-rcard-body').forEach(b => b.classList.remove('open'));
     document.querySelectorAll('.st-chevron').forEach(c => c.classList.remove('open'));
     if (!isOpen) { body.classList.add('open'); if (chv) chv.classList.add('open'); }
 }
 
-function stFilter(cat, btn) {
-    document.querySelectorAll('.st-fbtn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('.st-rcard').forEach(c => {
-        c.style.display = (cat === 'all' || c.dataset.cat === cat) ? '' : 'none';
-    });
+function togglePdfFrame(frameWrapId, btnId, url) {
+    const wrap = document.getElementById(frameWrapId);
+    const btn  = document.getElementById(btnId);
+    if (!wrap) return;
+    const isOpen = wrap.classList.contains('open');
+    if (!isOpen) {
+        const iframe = wrap.querySelector('iframe');
+        if (iframe && !iframe.src) iframe.src = url;
+        wrap.classList.add('open');
+        if (btn) { btn.classList.add('active'); btn.innerHTML = btn.innerHTML.replace('Toon rapport', 'Verberg rapport'); }
+    } else {
+        wrap.classList.remove('open');
+        if (btn) { btn.classList.remove('active'); btn.innerHTML = btn.innerHTML.replace('Verberg rapport', 'Toon rapport'); }
+    }
 }
 
-function stDownloadPDF(contentId, title) {
-    const el = document.getElementById(contentId);
-    if (!el) return;
-    const html = `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8">
-    <title>${title}</title>
-    <style>
-      body { font-family: Georgia, serif; max-width: 680px; margin: 40px auto; color: #1a202c; line-height: 1.7; font-size: 14px; }
-      h2 { font-size: 20px; margin-bottom: 4px; }
-      h3 { font-size: 16px; margin: 18px 0 8px; }
-      h4 { font-size: 14px; margin: 14px 0 6px; color: #333; }
-      p  { margin-bottom: 12px; color: #2d3748; }
-      .footer { margin-top: 40px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #718096; }
-    </style></head><body>
-    <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#C8311A;margin-bottom:8px;">DeAnalist — Research Department</div>
-    ${el.innerHTML}
-    <div class="footer">Dit rapport is uitsluitend informatief van aard en vormt op geen enkele wijze beleggingsadvies. Raadpleeg een erkend beleggingsadviseur voor persoonlijk advies. © DeAnalist ${new Date().getFullYear()}</div>
-    </body></html>`;
-
-    const blob = new Blob([html], { type: 'text/html' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = title.replace(/[^a-zA-Z0-9À-ÿ –]/g, '') + '.html';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+function stFilter(cat, btn) {
+    rappActiefFilter = cat;
+    document.querySelectorAll('.st-fbtn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderRapportCards(cat);
 }
 
 /* ── MAIN TAB SWITCHING ─────────────────────────────────────────────── */
@@ -1971,7 +1882,10 @@ document.getElementById('mainTabs').addEventListener('click', e => {
     // Scroll naar top bij switch
     window.scrollTo(0, 0);
     // Laad strategie bij eerste bezoek
-    if (panel === 'tab-strategie') loadStrategie();
+    if (panel === 'tab-strategie') {
+        loadStrategie();
+        loadRapporten();
+    }
 });
 
 </script>
