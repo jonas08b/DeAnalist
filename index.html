@@ -1250,6 +1250,7 @@
       <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
         <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#3a3e42;margin-bottom:6px;">Methodologie</div>
         <p style="font-size:10px;color:#3a3e42;line-height:1.55;margin:0;">Elke indicator scoort 0–100 (0 = zeer bearish, 50 = neutraal, 100 = zeer bullish). Het gewogen gemiddelde bepaalt het regime: <strong style="color:#444;">&gt;60 = Offensief</strong>, <strong style="color:#444;">40–60 = Neutraal</strong>, <strong style="color:#444;">&lt;40 = Defensief</strong>. Tik op een indicator voor toelichting en databronnen.</p>
+        <div id="st-smoothing-info" style="display:none;margin-top:8px;font-size:10px;color:#3a3e42;line-height:1.5;"></div>
       </div>
     </div>
 
@@ -1257,10 +1258,12 @@
     <div class="st-bronnen-card" id="st-bronnen-card" style="display:none;">
       <div class="st-bronnen-title">Databronnen</div>
       <div class="st-bronnen-list">
-        <div class="st-bron-row"><span class="st-bron-badge">Koersen</span><span>Yahoo Finance (real-time quotes via Chart API) — S&P 500, Nasdaq, VIX, 10Y &amp; 2Y Treasury Yield, DXY, WTI, Gold, XLK, XLF, XLE, HYG</span></div>
-        <div class="st-bron-row"><span class="st-bron-badge">Analyse</span><span>Google Gemini AI — macro-interpretatie, scoretoekenning en regime-classificatie op basis van de live marktdata</span></div>
-        <div class="st-bron-row"><span class="st-bron-badge">Yield Curve</span><span>Spread berekend als 10Y Yield − 2Y Yield (Treasury-proxy via Yahoo Finance); negatieve spread = inversie = historisch recessiesignaal</span></div>
-        <div class="st-bron-row"><span class="st-bron-badge">Krediet</span><span>HYG (iShares HY Corp Bond ETF) als proxy voor High Yield credit spreads — daling HYG impliceert verruimende spreads</span></div>
+        <div class="st-bron-row"><span class="st-bron-badge">Koersen</span><span>Yahoo Finance Chart API (3 maanden dagsluitingen) — S&amp;P 500, Nasdaq, Russell 2000, VIX, 10Y &amp; 3M Treasury Yield, Bund, DXY, WTI, Goud, Koper, HYG, LQD, XLK, XLF, XLE, XLU, XLV, SPY</span></div>
+        <div class="st-bron-row"><span class="st-bron-badge">Scoring</span><span>100% deterministisch — piecewise lineaire interpolatie op 20 sub-indicatoren. AI schrijft uitsluitend het tekstuele narratief (toelichtingen, visie, scenario's). Scores worden nooit door AI gegenereerd of aangepast.</span></div>
+        <div class="st-bron-row"><span class="st-bron-badge">Smoothing</span><span>Regimescore is het gewogen gemiddelde van vandaag (dubbel gewicht) + de vorige 4 handelsdagen — dempt dagelijkse regime-flips zonder te traag te reageren op echte trendbreuken</span></div>
+        <div class="st-bron-row"><span class="st-bron-badge">Yield Curve</span><span>Spread berekend als 10Y UST Yield − 3M T-bill; negatieve spread = inversie = historisch recessiesignaal (gemiddeld 12–18 maanden lead time)</span></div>
+        <div class="st-bron-row"><span class="st-bron-badge">Krediet</span><span>HYG (iShares HY Corp Bond ETF) en LQD (iShares IG Corp Bond ETF) als proxy voor credit spreads en risicobereidheid in het obligatiemarkt</span></div>
+        <div class="st-bron-row"><span class="st-bron-badge">AI Narratief</span><span>Google Gemini (primair) / Groq llama-3.3-70b (fallback bij rate limit) — schrijft uitsluitend de kwalitatieve toelichting op basis van de deterministisch berekende scores</span></div>
       </div>
     </div>
 
@@ -1885,27 +1888,27 @@ function renderMarktstrip(md) {
     }).join('');
 }
 
-// Methodologie per indicator
+// Methodologie per indicator — weerspiegelt de werkelijke sub-indicatoren uit strategy.js
 const INDICATOR_METHODE = {
     'Macro & Groei': {
-        methode: 'Gebaseerd op S&P 500 dagrendement, relatieve sectorkracht (XLK vs XLF vs XLE) en breedte van de marktbeweging. Een positief S&P-rendement met technologie-leadership = bullish signaal.',
-        bronnen: 'Yahoo Finance: ^GSPC, XLK, XLF, XLE'
+        methode: 'Vier sub-indicatoren (gewogen): Koper/Goud ratio 20d (35%) als leading groeiproxy — stijgende ratio = industriële vraag vs. vlucht naar veiligheid. Russell 2000 vs. S&P 500 20d (30%) meet binnenlandse groeidynamiek. DXY trend 20d (25%) als barometer voor global financial conditions — sterke dollar = krapte. WTI olie 20d (10%): matige stijging = positieve vraag; extreme stijging (&gt;8%) = inflatieschok, scoort bearish.',
+        bronnen: 'Yahoo Finance: HG=F (koper), GC=F (goud), ^RUT (Russell 2000), ^GSPC (S&P 500), DX-Y.NYB (DXY), CL=F (WTI)'
     },
     'Monetair Beleid': {
-        methode: 'Yield curve spread (10Y − 2Y) als primaire driver. Een positieve spread duidt op normaal monetair klimaat; inversie = restrictief. DXY-richting als secondaire factor voor financial conditions.',
-        bronnen: 'Yahoo Finance: ^TNX (10Y), ^IRX (2Y), DX-Y.NYB (DXY)'
-    },
-    'Positionering': {
-        methode: 'VIX-niveau als graadmeter voor impliciete marktangst: VIX &lt;15 = complacency (laag bullish signaal), VIX &gt;25 = fear (contrairiaans bullish). HYG als credit proxy voor risicobereidheid.',
-        bronnen: 'Yahoo Finance: ^VIX, HYG'
-    },
-    'Momentum': {
-        methode: 'Dagrendement S&P 500 en Nasdaq als korte-termijn momentum-signaal. Positieve day-returns in beide indices bevestigen bulls; divergentie (Nasdaq lag) = voorzichtigheid.',
-        bronnen: 'Yahoo Finance: ^GSPC, ^IXIC'
+        methode: 'Vier sub-indicatoren (gewogen): Yield curve 10Y−3M spread (40%) — negatieve spread = inversie = historisch recessiesignaal. Beleidsrente niveau via 3M T-bill (25%) — hogere rente = restrictiever klimaat voor risk assets. 10Y yield momentum 10d (25%) — dalende yields versoepelen financiële condities. Bund 10d trend (10%) als Europese monetaire thermometer — mist bij data-uitval van Yahoo Finance.',
+        bronnen: 'Yahoo Finance: ^TNX (10Y UST), ^IRX (3M T-bill), GDBR10=X (10Y Bund — best-effort)'
     },
     'Kredietmarkt': {
-        methode: 'HYG (iShares HY Corp Bond ETF) koers en dagrendement als proxy voor High Yield spreads. Stijgende HYG = krimpende spreads = risicobereidheid; dalende HYG = verruimende spreads = stress.',
-        bronnen: 'Yahoo Finance: HYG'
+        methode: 'Vier sub-indicatoren (gewogen): HYG 20d momentum (35%) — stijgende HYG = krimpende HY spreads = risicobereidheid. LQD 20d momentum (25%) — richting van investment grade credit. HYG vs. SPY relatief 20d (25%) — credit en equities in dezelfde richting = gezonde markt; divergentie = waarschuwingssignaal. HY/IG ratio HYG-LQD 20d (15%) — voorkeur voor HY boven IG wijst op risk appetite.',
+        bronnen: 'Yahoo Finance: HYG (iShares HY Corp Bond ETF), LQD (iShares IG Corp Bond ETF), SPY (S&P 500 ETF)'
+    },
+    'Marktmomentum': {
+        methode: 'Vier sub-indicatoren (gewogen): S&P 500 afwijking van 20d SMA (35%) — trendindicator; positieve afwijking = bullish momentum. VIX niveau (22%) — angstbarometer, lager gewicht om dubbeltelling met VIX-trend te beperken; VIX &lt;15 = complacency, VIX &gt;28 = fear. S&P 500 5d rendement (20%) — korte-termijn prijsmomentum. Nasdaq vs. S&P 500 20d (23%) — tech-leadership als risk-on signaal; verhoogd gewicht als tegengewicht voor VIX-reductie.',
+        bronnen: 'Yahoo Finance: ^GSPC (S&P 500), ^VIX (CBOE VIX), ^IXIC (Nasdaq Composite)'
+    },
+    'Risico & Positionering': {
+        methode: 'Vier sub-indicatoren (gewogen): VIX trend 10d (22%) — stijgende VIX = toenemende onzekerheid; lager gewicht om dubbeltelling te dempen. Goud vs. S&P 500 20d (25%) — goud outperformt = vlucht naar veiligheid = bearish voor equities. Defensief (XLU + XLV) vs. Cyclisch (XLK + XLF) 20d (35%) — sectorrotatie als institutioneel positioneringssignaal; verhoogd gewicht als primaire risicomaatstaf. Energie (XLE) vs. SPY 20d (18%) — extreme outperformance energie wijst op inflatieschok.',
+        bronnen: 'Yahoo Finance: ^VIX, GC=F (goud), ^GSPC, XLU, XLV (defensief), XLK, XLF (cyclisch), XLE (energie), SPY'
     }
 };
 
@@ -1945,6 +1948,17 @@ function renderRegime(data) {
     const fills = Math.round((score / 100) * 7);
     const segClr = score >= 60 ? '#22c55e' : score <= 40 ? '#ef4444' : '#f59e0b';
     segs.forEach((s, i) => { s.style.background = i < fills ? segClr : '#2a2e32'; });
+
+    // Smoothing info
+    const smoothEl = document.getElementById('st-smoothing-info');
+    if (smoothEl) {
+        if (data.regimeSmoothed && data.rawRegimeScore != null && data.rawRegimeScore !== data.regimeScore) {
+            smoothEl.textContent = `Smoothed score: ${data.regimeScore} (ruwe dagscore: ${data.rawRegimeScore}) — 5-daags voortschrijdend gemiddelde actief`;
+            smoothEl.style.display = 'block';
+        } else {
+            smoothEl.style.display = 'none';
+        }
+    }
 
     if (Array.isArray(data.indicators)) {
         indic.innerHTML = data.indicators.map((ind, i) => {
