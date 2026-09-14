@@ -49,6 +49,44 @@ async function writeCache(data, token, thema) {
     } catch (e) { console.warn('[strategy] Cache schrijven mislukt:', e.message); }
 }
 
+/**
+ * Haalt de regimeScores op uit de afgelopen N dagen (excl. vandaag) voor smoothing.
+ * Leest de cache-keys van de vorige 4 kalenderdagen.
+ * Retourneert array van beschikbare scores (kan leeg zijn bij koude start).
+ */
+async function readRecentScores(token, thema, n = 4) {
+    if (!token) return [];
+    const scores = [];
+    for (let i = 1; i <= n; i++) {
+        try {
+            const d    = new Date();
+            d.setDate(d.getDate() - i);
+            const dag  = d.toISOString().slice(0, 10);
+            const slug = thema ? `-${thema.replace(/[^a-z0-9]/gi, '_').toLowerCase()}` : '';
+            const key  = `strategie-cache/regime-v2-${dag}${slug}.json`;
+            const blob = await head(key, { token });
+            if (!blob?.url) continue;
+            const res  = await fetch(blob.url);
+            if (!res.ok) continue;
+            const obj  = await res.json();
+            if (typeof obj?.regimeScore === 'number') scores.push(obj.regimeScore);
+        } catch { /* dag niet in cache — overslaan */ }
+    }
+    return scores;
+}
+
+/**
+ * Berekent het smoothed regime op basis van vandaag + historische scores.
+ * Vandaag weegt dubbel om responsiviteit te bewaren bij echte trendbreuken.
+ * Bij te weinig history (<2 dagen) wordt de ruwe score gebruikt.
+ */
+function smoothRegime(todayScore, historicScores) {
+    if (!historicScores.length) return { smoothedScore: todayScore, smoothed: false };
+    const all    = [todayScore, todayScore, ...historicScores]; // vandaag 2x gewicht
+    const avg    = Math.round(all.reduce((a, b) => a + b, 0) / all.length);
+    return { smoothedScore: avg, smoothed: true };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // DATA FETCHING — 3 maanden dagsluiting voor alle tickers
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -194,10 +232,12 @@ function s_dxyTrend(m) {
         [-0.05, 80], [-0.03, 68], [-0.01, 57], [0.01, 50], [0.03, 38], [0.05, 26], [0.08, 14],
     ]);
 }
-// WTI olie 20d: matige stijging = vraag; scherpe stijging = inflatieschok
+// WTI olie 20d: matige stijging = vraag (positief); scherpe stijging = inflatieschok (negatief).
+// Monotoon dalend voorbij +8%: geen score-hump die een extreme oliebeweging als neutraal weergeeft.
 function s_oilTrend(m) {
     return pw(ret(m.oil?.closes, 20), [
-        [-0.20, 25], [-0.10, 36], [-0.05, 45], [0.05, 55], [0.10, 60], [0.20, 50], [0.30, 34],
+        [-0.20, 22], [-0.10, 34], [-0.05, 44], [0, 52], [0.04, 57], [0.08, 54],
+        [0.15, 42], [0.22, 30], [0.30, 18],
     ]);
 }
 
@@ -330,12 +370,15 @@ function computeScoring(m) {
     const subMomentum = [s_spVsSMA20(m),  s_vixLevel(m),  s_sp5dMom(m),  s_nasdaqLead(m)];
     const subRisico   = [s_vixTrend(m),   s_goldVsSP(m),  s_defVsCycl(m), s_energySignal(m)];
 
-    // Gewichten per sub-indicator (binnen elke factor)
+    // Gewichten per sub-indicator (binnen elke factor).
+    // VIX-niveau (Momentum) en VIX-trend (Risico) zijn bewust teruggeschroefd
+    // om dubbeltelling te dempen bij extreme volatiliteitspieken.
+    // Gewicht is herverdeeld naar respectievelijk Nasdaq-leadership en Sector-rotatie.
     const wMacro    = [0.35, 0.30, 0.25, 0.10];
     const wMonetair = [0.40, 0.25, 0.25, 0.10];
     const wKrediet  = [0.35, 0.25, 0.25, 0.15];
-    const wMomentum = [0.35, 0.30, 0.20, 0.15];
-    const wRisico   = [0.30, 0.30, 0.25, 0.15];
+    const wMomentum = [0.35, 0.22, 0.20, 0.23]; // VIX niveau: 0.30→0.22; Nasdaq lead: 0.15→0.23
+    const wRisico   = [0.22, 0.25, 0.35, 0.18]; // VIX trend: 0.30→0.22; Defensief/Cycl: 0.25→0.35
 
     const macro    = wavg(subMacro,    wMacro);
     const monetair = wavg(subMonetair, wMonetair);
@@ -507,6 +550,17 @@ export default async function handler(req, res) {
         // ── 3. Deterministisch scoren ─────────────────────────────────────
         const scoring = computeScoring(m);
 
+        // ── 3b. Regime smoothing (5-daags voortschrijdend) ────────────────
+        // Dempt dagelijkse regime-flips zonder responsiviteit op echte trendbreuken te verliezen.
+        const historicScores              = await readRecentScores(blobToken, thema);
+        const { smoothedScore, smoothed } = smoothRegime(scoring.regimeScore, historicScores);
+        if (smoothed) {
+            scoring.rawRegimeScore  = scoring.regimeScore;  // bewaar voor transparantie
+            scoring.regimeScore     = smoothedScore;
+            scoring.regime          = smoothedScore >= 60 ? 'Offensief'
+                                    : smoothedScore <= 40 ? 'Defensief' : 'Neutraal';
+        }
+
         // ── 4. AI: uitsluitend narratief ──────────────────────────────────
         const prompt = buildAIPrompt(scoring, m, thema);
         const { text, provider } = await callAI(prompt, { geminiKey, groqKey });
@@ -539,10 +593,14 @@ export default async function handler(req, res) {
         };
 
         // ── 6. Methodologie-documentatie (voor frontend) ──────────────────
+        const bundBeschikbaar = !!m.bund;
         const methodologie = {
             schaal:   '0–100 | 0 = extreem bearish · 50 = neutraal · 100 = extreem bullish',
             regime:   '>60 = Offensief · 40–60 = Neutraal · <40 = Defensief',
-            scoring:  '100% deterministisch via piecewise lineaire interpolatie — geen AI-input voor scores',
+            scoring:  '100% deterministisch via piecewise lineaire interpolatie — AI schrijft uitsluitend het narratief, geen scores',
+            smoothing: smoothed
+                ? `5-daags voortschrijdend gemiddelde actief (ruwe score: ${scoring.rawRegimeScore}, smoothed: ${scoring.regimeScore})`
+                : 'Onvoldoende geschiedenis — ruwe score gebruikt (smoothing actief vanaf dag 2)',
             gewichten: {
                 'Macro & Groei':          '25%',
                 'Monetair Beleid':        '25%',
@@ -552,18 +610,21 @@ export default async function handler(req, res) {
             },
             subIndicatoren: {
                 'Macro & Groei':          'Koper/Goud ratio 35% · Russell vs S&P 30% · DXY trend 25% · Olie momentum 10%',
-                'Monetair Beleid':        'Yield curve 10Y-3M 40% · Beleidsrente niveau 25% · 10Y momentum 25% · Bund trend 10%',
+                'Monetair Beleid':        `Yield curve 10Y-3M 40% · Beleidsrente niveau 25% · 10Y momentum 25% · Bund trend 10%${bundBeschikbaar ? '' : ' (Bund N/B — gewicht herverdeeld)'}`,
                 'Kredietmarkt':           'HYG momentum 35% · LQD momentum 25% · HYG vs SPY 25% · HY/IG ratio 15%',
-                'Marktmomentum':          'S&P vs SMA20 35% · VIX niveau 30% · S&P 5d momentum 20% · Nasdaq lead 15%',
-                'Risico & Positionering': 'VIX trend 30% · Goud vs S&P 30% · Defensief/Cyclisch 25% · Energie vs SPY 15%',
+                'Marktmomentum':          'S&P vs SMA20 35% · VIX niveau 22% · S&P 5d momentum 20% · Nasdaq lead 23%',
+                'Risico & Positionering': 'VIX trend 22% · Goud vs S&P 25% · Defensief/Cyclisch 35% · Energie vs SPY 18%',
             },
+            bundBeschikbaar,
         };
 
         // ── 7. Assembleeer response ───────────────────────────────────────
         const response = {
-            regime:       scoring.regime,
-            regimeScore:  scoring.regimeScore,
-            indicators:   indicatorsMetToelichting,
+            regime:          scoring.regime,
+            regimeScore:     scoring.regimeScore,
+            rawRegimeScore:  scoring.rawRegimeScore ?? scoring.regimeScore,
+            regimeSmoothed:  smoothed,
+            indicators:      indicatorsMetToelichting,
             visie:        aiData.visie        ?? null,
             scenarios:    aiData.scenarios    ?? [],
             kernrisicos:  aiData.kernrisicos  ?? [],
