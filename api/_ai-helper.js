@@ -9,19 +9,46 @@ const GROQ_MODEL   = 'llama-3.3-70b-versatile';
 const GROQ_URL     = 'https://api.groq.com/openai/v1/chat/completions';
 
 /**
- * Bepaalt of een Gemini-fout een rate limit / quota-fout is.
- * Gemini gooit dan een Error met statuscode 429 of tekst RESOURCE_EXHAUSTED.
+ * Bepaalt of een Gemini-fout moet leiden tot een fallback naar Groq.
+ * We vallen terug bij:
+ *   - 429 Too Many Requests  (rate limit / quota op)
+ *   - 503 Service Unavailable (Gemini tijdelijk niet bereikbaar)
+ *   - 500 Internal Server Error (onverwachte serverfout aan Gemini-kant)
+ *   - Netwerk-/timeout-fouten (fetch gooit zelf een Error zonder statuscode)
+ *
+ * Configuratiefouten (ontbrekende API-key, ongeldige prompt-structuur) worden
+ * NIET opgevangen zodat ze zichtbaar blijven als echte bugs.
  */
-function isRateLimitError(err) {
+function shouldFallback(err) {
+    // Expliciete statuscodes via err.status (Google SDK) of err.statusCode
+    const status = err?.status ?? err?.statusCode;
+    if (status === 429 || status === 503 || status === 500) return true;
+
     const msg = (err?.message || '').toLowerCase();
-    return (
-        msg.includes('429')               ||
-        msg.includes('resource_exhausted') ||
-        msg.includes('quota')              ||
-        msg.includes('rate limit')         ||
-        msg.includes('too many requests')  ||
-        err?.status === 429
-    );
+
+    // Statuscode als tekst in de foutmelding (SDK gedrag varieert)
+    if (msg.includes('429') || msg.includes('503') || msg.includes('500')) return true;
+
+    // Gemini-specifieke quota/rate-limit meldingen
+    if (
+        msg.includes('resource_exhausted')   ||
+        msg.includes('quota')                ||
+        msg.includes('rate limit')           ||
+        msg.includes('too many requests')    ||
+        msg.includes('service_unavailable')
+    ) return true;
+
+    // Netwerk- en time-outfouten: fetch gooit een TypeError of Error zonder statuscode
+    if (
+        err instanceof TypeError            || // fetch: network failure
+        msg.includes('fetch')               ||
+        msg.includes('network')             ||
+        msg.includes('timeout')             ||
+        msg.includes('econnrefused')        ||
+        msg.includes('enotfound')
+    ) return true;
+
+    return false;
 }
 
 /**
@@ -66,8 +93,9 @@ async function callGroq(prompt, groqKey) {
 
 /**
  * Hoofd-aanroepfunctie.
- * Probeert eerst Gemini 3.5 Flash; bij rate-limit schakelt het onmiddellijk
- * over naar Groq llama-3.3-70b-versatile.
+ * Probeert eerst Gemini 3.5 Flash; bij elke herstelbare fout (rate limit,
+ * 503, netwerk) schakelt het onmiddellijk over naar Groq.
+ * Niet-herstelbare fouten (config, ongeldige key) worden doorgegooid.
  *
  * @param {string} prompt      - De volledige prompt.
  * @param {object} env         - { geminiKey, groqKey }
@@ -80,10 +108,10 @@ export async function callAI(prompt, { geminiKey, groqKey }) {
         const text = await callGemini(prompt, geminiKey);
         return { text, provider: 'gemini' };
     } catch (err) {
-        if (!isRateLimitError(err)) throw err; // andere fout → doorgooi
+        if (!shouldFallback(err)) throw err; // niet-herstelbare fout → doorgooi
 
-        console.warn('[ai-helper] Gemini rate limit geraakt — overschakelen naar Groq.');
-        if (!groqKey) throw new Error('Gemini rate limit bereikt en GROQ_API_KEY ontbreekt.');
+        console.warn(`[ai-helper] Gemini niet beschikbaar (${err?.status ?? err?.message ?? 'onbekend'}) — overschakelen naar Groq.`);
+        if (!groqKey) throw new Error(`Gemini niet beschikbaar en GROQ_API_KEY ontbreekt. Originele fout: ${err.message}`);
 
         const text = await callGroq(prompt, groqKey);
         return { text, provider: 'groq' };
