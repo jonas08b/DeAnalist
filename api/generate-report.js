@@ -386,9 +386,17 @@ function buildPdfHtml(type, content, datum) {
 // ─── Prompt builders ──────────────────────────────────────────────────────────
 
 function buildPrompt(type, marktStr, datum) {
-    const basis = `Je bent een senior strateeg bij een institutioneel beleggingsresearchbureau (denk: Gavekal, BCA Research, Goldman Sachs Global Investment Research).
-Schrijf UITSLUITEND in het NEDERLANDS. Toon: opiniërend, zelfverzekerd, institutioneel. Geen retail-taal, geen vaagheden.
-Geef je antwoord UITSLUITEND als geldig JSON. Geen markdown, geen extra tekst buiten de JSON.
+    const basis = `Je bent een financieel analist die complexe marktsituaties uitlegt aan eerstejaars universiteitsstudenten zonder voorkennis van beleggen.
+
+SCHRIJFREGELS — volg deze strikt:
+1. Schrijf UITSLUITEND in het NEDERLANDS.
+2. Gebruik gewone, heldere taal. Geen vakjargon zonder uitleg.
+3. Elke technische term die je toch gebruikt, leg je DIRECT tussen haakjes kort uit.
+   Voorbeelden: "de rente op staatsobligaties (leningen van de overheid)", "de VIX (een maatstaf voor hoe nerveus de markt is)", "XLF (een mandje van bankaandelen)".
+4. Gebruik concrete vergelijkingen of analogieën om abstracte begrippen te verduidelijken.
+   Denk aan: "dit werkt zoals een spaarrekening die opeens veel meer rente geeft — waardoor beleggen in aandelen minder aantrekkelijk wordt."
+5. Wees opiniërend en zelfverzekerd, maar toegankelijk. Geen vaagheden, wel begrijpelijke taal.
+6. Geef je antwoord UITSLUITEND als geldig JSON. Geen markdown, geen extra tekst buiten de JSON.
 
 Datum: ${datum}
 LIVE MARKTDATA:
@@ -396,87 +404,87 @@ ${marktStr}
 `;
 
     if (type === 'daily') return basis + `
-TAAK: Schrijf een Daily Strategy Note — gefocust op het meest materiële macro-event of marktdynamiek van vandaag.
+TAAK: Schrijf een Daily Strategy Note — focused op het belangrijkste marktverhaal van vandaag.
 
 JSON-formaat:
 {
-  "titel": "Prikkelende institutionele kop — max 12 woorden, geen clichés",
-  "conclusie": "Onze directe aanbeveling in één zin, concreet en directioneel",
-  "intro": "Twee zinnen die de essentie van het rapport samenvatten — geschikt als preview op een kaart (max 240 tekens)",
+  "titel": "Prikkelende, begrijpelijke kop — max 12 woorden, geen vakjargon",
+  "conclusie": "Onze aanbeveling in één zin — concreet, zonder vaktermen of met uitleg erbij",
+  "intro": "Twee zinnen die de kern samenvatten voor iemand die nooit eerder de beurs volgde (max 240 tekens)",
   "secties": [
     {
-      "titel": "Macro-achtergrond",
-      "inhoud": "Twee alinea's: wat zeggen de data van vandaag? Welke trend bevestigt of breekt?"
+      "titel": "Wat gebeurt er vandaag?",
+      "inhoud": "Twee alinea's: leg uit wat de marktdata van vandaag betekenen in gewone taal. Gebruik één concrete analogie. Elke technische term wordt uitgelegd tussen haakjes bij eerste gebruik."
     },
     {
-      "titel": "Directe Positionering",
-      "inhoud": "Concrete sectoren, asset classes of handelsstrategie voor vandaag/deze week"
+      "titel": "Wat betekent dit voor beleggers?",
+      "inhoud": "Welke sectoren of beleggingen worden nu interessanter of juist risicovoller? Leg uit waarom, met een vergelijking die een student begrijpt."
     },
     {
-      "titel": "Kernrisico",
-      "inhoud": "Het grootste risico dat de consensus onderwaardeert — met concreet getal of niveau"
+      "titel": "Waar moet je op letten?",
+      "inhoud": "Het grootste risico van dit moment — uitgelegd met een concreet getal én een uitleg wat dat getal betekent in de praktijk."
     }
   ]
 }`;
 
     if (type === 'weekly') return basis + `
-TAAK: Schrijf een Weekly Positioning & Structure rapport — gefocust op kapitaalstromen, sectorrotatie en positionering voor de komende week.
+TAAK: Schrijf een Weekly Positioning rapport — focused op wat er deze week beweegt en waarom.
 
 JSON-formaat:
 {
-  "titel": "Prikkelende institutionele kop — max 12 woorden",
-  "conclusie": "Onze wekelijkse strategische aanbeveling in één zin",
-  "intro": "Twee zinnen die de essentie samenvatten als preview (max 240 tekens)",
+  "titel": "Prikkelende, begrijpelijke kop — max 12 woorden",
+  "conclusie": "De wekelijkse hoofdboodschap in één begrijpelijke zin",
+  "intro": "Twee zinnen die de kern samenvatten voor een leek (max 240 tekens)",
   "secties": [
     {
-      "titel": "Waar zit geld klem?",
-      "inhoud": "Crowded trades, overbought sectoren, positionerings-extremen (CFTC, ETF flows)"
+      "titel": "Waar zit te veel geld in?",
+      "inhoud": "Welke beleggingen zijn op dit moment erg populair (mogelijk te populair)? Leg uit waarom dat een risico kan zijn, met een herkenbare vergelijking."
     },
     {
-      "titel": "Sectorrotatie & Flows",
-      "inhoud": "Waar stroomt institutioneel kapitaal naartoe en waarom? Relatieve sterkte-analyse."
+      "titel": "Waar stroomt geld naartoe?",
+      "inhoud": "Welke sectoren of markten winnen momenteel aan populariteit? Leg uit waarom beleggers die kant op bewegen en wat dat betekent."
     },
     {
-      "titel": "Waar dreigt paniek?",
-      "inhoud": "Kredietkwaliteit, volatiliteitsregime, katalysatoren die een squeeze kunnen triggeren"
+      "titel": "Wat kan er mis gaan?",
+      "inhoud": "De grootste bedreigingen voor deze week — uitgelegd in begrijpelijke termen met concrete niveaus en wat die niveaus in de praktijk betekenen."
     },
     {
-      "titel": "Positionering voor de week",
-      "inhoud": "Concrete over- en onderwegingen per sector/asset class voor de komende 5 handelsdagen"
+      "titel": "Wat doe je deze week?",
+      "inhoud": "Concrete aanbevelingen per sector of beleggingscategorie — met uitleg waarom, in gewone taal."
     }
   ]
 }`;
 
     // deep-dive
     return basis + `
-TAAK: Schrijf een Deep-Dive Strategic Research rapport — grondig thematisch onderzoek op basis van de huidige marktomstandigheden.
-Kies ZELF het meest relevante thema gezien de live marktdata.
+TAAK: Schrijf een Deep-Dive rapport — een grondig verhaal over het meest relevante thema op dit moment.
+Kies ZELF het meest relevante thema op basis van de live marktdata.
 
 JSON-formaat:
 {
-  "titel": "Institutionele thematitel — max 14 woorden, specifiek en prikkelend",
-  "conclusie": "De centrale these in één krachtige zin",
-  "intro": "Twee zinnen die het thema en de kernboodschap samenvatten als preview (max 240 tekens)",
+  "titel": "Toegankelijke thematitel — max 14 woorden, specifiek en prikkelend",
+  "conclusie": "De centrale boodschap in één krachtige, begrijpelijke zin",
+  "intro": "Twee zinnen die het thema samenvatten voor iemand zonder beleggingskennis (max 240 tekens)",
   "secties": [
     {
-      "titel": "De Centrale These",
-      "inhoud": "Twee alinea's: wat is het kernargument? Waarom nu relevant?"
+      "titel": "Het grote verhaal",
+      "inhoud": "Twee alinea's: wat is er aan de hand en waarom is dit nu belangrijk? Begin met een analogie of vergelijking die een eerstejaars student herkent."
     },
     {
-      "titel": "Marktcontext & Data",
-      "inhoud": "Concreet bewijs uit de live marktdata — getallen, levels, trends"
+      "titel": "Wat zeggen de cijfers?",
+      "inhoud": "Concreet bewijs uit de live marktdata — elk getal wordt uitgelegd wat het in de praktijk betekent."
     },
     {
-      "titel": "Wat de Consensus Mist",
-      "inhoud": "De mispricing of het structurele risico dat breed wordt genegeerd"
+      "titel": "Wat ziet niemand nog?",
+      "inhoud": "Het risico of de kans die de meeste beleggers over het hoofd zien — uitgelegd alsof je het aan een vriend uitlegt."
     },
     {
-      "titel": "Scenario-Analyse",
-      "inhoud": "Bull, base en bear case — elk met concreet koersdoel of niveau"
+      "titel": "Drie scenario's",
+      "inhoud": "Het beste geval, het meest waarschijnlijke geval en het slechtste geval — elk in 2-3 begrijpelijke zinnen met concrete niveaus."
     },
     {
-      "titel": "Beleggingsimplicaties",
-      "inhoud": "Concrete sectoren, thema's of instrumenten — met tijdshorizon"
+      "titel": "Wat kun je hiermee?",
+      "inhoud": "Concrete sectoren of beleggingen die hierop inspelen — uitgelegd wat ze zijn en waarom ze nu interessant zijn."
     }
   ]
 }`;
