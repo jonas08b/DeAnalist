@@ -484,9 +484,11 @@ ${JSON.stringify(dataCtx.markt, null, 2)}
 
 STRIKTE EISEN:
 - Toelichting per factor: ÉÉN zin. Noem het dominante sub-indicator cijfer + forward implicatie (geen verleden).
+- ETF-tickers: vermeld bij eerste gebruik altijd een korte haakjesomschrijving, bijv. XLF (de 65 grootste Amerikaanse banken en verzekeraars), XLE (energiebedrijven S&P 500), XLK (technologiesector S&P 500), IWM (Russell 2000 small-cap ETF).
 - Visie: opiniërend, concrete niveaus (S&P support/weerstand, VIX drempel, spread niveau), historische context.
 - Scenario's: kansen optellen tot exact 100%. Triggers en niveaus zijn concreet.
 - Geen open deuren, geen "de markt zal volatiel zijn".
+- Positionering: formuleer ALTIJD als "Op basis van onze analyse is [positie] consistent met het beschreven scenario" — NOOIT "wij adviseren" of andere directieve handelssignalen.
 - Datum: ${vandaag}
 
 Geef antwoord UITSLUITEND als geldig JSON (geen markdown, geen backticks buiten de JSON):
@@ -516,7 +518,7 @@ Geef antwoord UITSLUITEND als geldig JSON (geen markdown, geen backticks buiten 
     { "titel": "korte naam", "richting": "neerwaarts", "toelichting": "Trigger: [concreet]. Niveau: [concreet]. Precedent: [historisch]." }
   ],
   "positioning": {
-    "aanbeveling": "Long/Short/Neutraal [asset of sector] — één directe zin",
+    "aanbeveling": "Op basis van onze analyse is een Long/Short/Neutraal positie in [asset of sector] consistent met het beschreven scenario — formuleer NOOIT als 'wij adviseren' maar altijd als scenario-consistente conclusie",
     "entryZone":   "concreet niveau of conditie voor entry",
     "target":      "concreet koersdoel",
     "horizon":     "timeframe in handelsdagen of weken"
