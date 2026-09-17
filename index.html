@@ -1653,7 +1653,7 @@ function renderReport(fin, ai) {
             <td style="padding:4px 6px;border:1px solid #e2e8f0;text-align:center;">${p.fcfYield || '—'}</td>
             <td style="padding:4px 6px;border:1px solid #e2e8f0;text-align:center;">${p.nettomarge || '—'}</td>
             <td style="padding:4px 6px;border:1px solid #e2e8f0;color:#475569;font-size:8px;">${p.relevantie || ''}</td>
-        </tr>\`;
+        </tr>`;
     }).join('');
 
     // Fix #5: voeg gewogen sectorgemiddelde toe als footer rij
@@ -1668,7 +1668,7 @@ function renderReport(fin, ai) {
                 <td style="padding:4px 6px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#0f172a;">${sectorGem.fcfYield || '—'}</td>
                 <td style="padding:4px 6px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#0f172a;">${sectorGem.nettomarge || '—'}</td>
                 <td style="padding:4px 6px;border:1px solid #e2e8f0;color:#475569;font-size:7.5px;font-style:italic;">${sectorGem.berekeningsNoot || ''}</td>
-            </tr>\`;
+            </tr>`;
     }
 
     const moat = ai.peers?.monopoliepremie || [];
