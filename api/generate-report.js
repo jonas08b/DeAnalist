@@ -16,16 +16,21 @@ const YF_HDRS   = { 'User-Agent': 'Mozilla/5.0 (compatible; DeAnalist/1.0)' };
 async function fetchQuote(symbol) {
     for (const base of [YF_BASE, YF_BASE_2]) {
         try {
+            // range=10d zodat we 5 handelsdagen terug kunnen gaan voor de 1W verandering
             const r = await fetch(
-                `${base}/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`,
+                `${base}/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=10d`,
                 { headers: YF_HDRS }
             );
             if (!r.ok) continue;
-            const d    = await r.json();
-            const meta = d?.chart?.result?.[0]?.meta;
-            if (!meta) continue;
+            const d      = await r.json();
+            const result = d?.chart?.result?.[0];
+            if (!result) continue;
+            const meta   = result.meta;
+            const rawC   = result.indicators?.quote?.[0]?.close ?? [];
+            const closes = rawC.filter(c => c !== null && c !== undefined);
             const price  = meta.regularMarketPrice;
-            const prev   = meta.previousClose || meta.chartPreviousClose || price;
+            // 1W verandering: 5 handelsdagen geleden, fallback naar 1D
+            const prev   = closes.at(-6) ?? closes.at(-2) ?? price;
             const chgPct = prev ? ((price - prev) / prev) * 100 : 0;
             return { symbol, price, prev, chgPct };
         } catch { continue; }
