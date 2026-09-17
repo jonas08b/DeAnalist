@@ -107,7 +107,10 @@ async function fetchHistory(symbol) {
             if (!closes.length) continue;
 
             const price  = meta.regularMarketPrice ?? closes.at(-1);
-            const prev   = meta.previousClose ?? meta.chartPreviousClose ?? closes.at(-2) ?? price;
+            // 1W verandering: slotkoers van 5 handelsdagen geleden
+            // closes heeft 3 maanden dagdata, dus closes.at(-6) is altijd beschikbaar.
+            // Fallback naar -2 (1D) als er toch onvoldoende history is.
+            const prev   = closes.at(-6) ?? closes.at(-2) ?? price;
             const chgPct = prev ? ((price - prev) / prev) * 100 : 0;
 
             return { symbol, price, prev, chgPct, closes, name: meta.shortName || symbol };
