@@ -42,7 +42,7 @@ Elk getal moet reproduceerbaar zijn door de lezer.
 
 2. TERMINALE WAARDE VOLLEDIG UITGEWERKT
 Verklaar in terminaleWaarde:
-- Gekozen groeivoet g gemotiveerd door verwachte nominale bbp-groei thuisland, sectorgroei langetermijn, en positie van het bedrijf
+- Gekozen groeivoet g met EXPLICIETE WEGING: vermeld het gewicht van bbp-groei thuisland, sectorgroei en bedrijfspositie-correctie (bijv. 40%/50%/10%) en de rekenkundige combinatie die tot g leidt
 - Berekening TV = FCF_t+1 / (WACC - g)
 - Contante waarde TV met kortingsfactor
 - Bridge EV naar Equity: EV minus nettoschuld plus kasoverschot gedeeld door aandelencount
@@ -94,6 +94,7 @@ Geef je antwoord UITSLUITEND als een geldig JSON-object met exact deze structuur
       "bijdrage": "€X"
     },
     "gewogenKoersdoel": "€X",
+    "koersdoelBandbreedte": "€X–€X (centrale WACC/groei-aannames uit gevoeligheidsmatrix; range exclusief extreme scenario's)",
     "rekencheck": "(€X x X%) + (€X x X%) + (€X x X%) = €X"
   },
 
@@ -125,7 +126,7 @@ Geef je antwoord UITSLUITEND als een geldig JSON-object met exact deze structuur
       {"jaar": "FY2030E", "omzet": "€Xmrd", "ebitMarge": "X%", "fcf": "€Xmrd", "eps": "€X"}
     ],
     "terminaleWaarde": {
-      "groeivoetKeuze": "g = X%. Motivatie: nominale bbp-groei thuisland X%, sectorgroei langetermijn X%, positie bedrijf: marktleider/niche/cyclisch. Combinatie rechtvaardigt groeivoet van X%.",
+      "groeivoetKeuze": "g = X%. Weging: bbp-groei thuisland X% (gewicht X%), sectorgroei langetermijn X% (gewicht X%), bedrijfspositie-correctie ±X% → gewogen g = X%. Motivatie: [cyclisch/marktleider/niche] rechtvaardigt deze weging omdat [concrete reden].",
       "berekening": "TV = FCF_t+1 / (WACC - g) = €Xmrd / (X% - X%) = €Xmrd",
       "contanteWaardeTv": "€Xmrd x kortingsfactor X = €Xmrd",
       "aandeelInEv": "X%",
@@ -138,7 +139,8 @@ Geef je antwoord UITSLUITEND als een geldig JSON-object met exact deze structuur
         ["€X", "€X", "€X", "€X"],
         ["€X", "€X", "€X", "€X"],
         ["€X", "€X", "€X", "€X"]
-      ]
+      ],
+      "baseCaseToelichting": "Onze centrale aanname (WACC X%, g X%) reflecteert [reden: bijv. huidige renteverwachting + sectorgroei] en levert een intrinsieke waarde van €X, die na weging resulteert in het koersdoel van €X."
     }
   },
 
@@ -193,6 +195,14 @@ Geef je antwoord UITSLUITEND als een geldig JSON-object met exact deze structuur
 
   "peers": {
     "selectieCriteria": "Peers geselecteerd op drie criteria: (a) business-mix, (b) EBIT-margestructuur binnen 5pp, (c) omzetgroei CAGR binnen 3pp. Peers die op slechts een criterium scoren zijn uitgesloten tenzij onderbouwd.",
+    "sectorGemiddelde": {
+      "forwardPE": "X.Xx",
+      "evEbitda": "X.Xx",
+      "pegRatio": "X.XX",
+      "fcfYield": "X.X%",
+      "nettomarge": "X.X%",
+      "berekeningsNoot": "Gewogen gemiddelde van directe peers (gelijk gewogen tenzij onderbouwd anders)"
+    },
     "directe": [
       {
         "naam": "Directe Concurrent 1",
@@ -287,9 +297,9 @@ Geef je antwoord UITSLUITEND als een geldig JSON-object met exact deze structuur
   "waardering": "Vergelijk P/E of EV/EBITDA met (1) sectorgemiddelde, (2) historisch gemiddelde 5j indien bekend, (3) upside/downside tov huidige koers op basis van koersdoel. Vermeld ook in één zin waarom ons intern koersdoel (uit koersdoelAfleiding.gewogenKoersdoel) kan afwijken van externe analistenconsensus. Conclusie in een zin.",
 
   "bronnen": [
-    "Koers, market cap, omzet, marges, dividendrendement: Yahoo Finance (real-time)",
-    "Consensus koersdoel referentie: Financial Modeling Prep (analistengemiddelde)",
-    "Prognoses FY2026-2030: eigen model op basis van historische groei + sectortrends",
+    "Koers, market cap, omzet, marges, dividendrendement: Yahoo Finance (real-time) — data kan afwijken van officieel gerapporteerde IFRS-cijfers; controleer bij afwijkingen >5% via company filings",
+    "Consensus koersdoel referentie: Financial Modeling Prep (analistengemiddelde, N analisten, per publicatiedatum) — breedte van consensusrange afhankelijk van analistendekking",
+    "Prognoses FY2026-2030: eigen model op basis van historische groei + sectortrends — DCF-model bijgewerkt op publicatiedatum; controleer na elk kwartaalrapport",
     "AI-tekstgeneratie en modelberekeningen: Gemini 3.5 Flash / Groq llama-3.3-70b-versatile"
   ]
 }`;
