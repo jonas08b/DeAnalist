@@ -965,6 +965,7 @@
                     <div style="text-align:right;font-size:8.5px;color:#64748b;line-height:1.8;min-width:120px;">
                         <div>Datum: <span id="pdf-date" style="font-weight:600;color:#0f172a;"></span></div>
                         <div>Koersdoel: <span id="pdf-koersdoel-header" style="font-weight:700;color:#0f172a;"></span></div>
+                        <div id="pdf-koersdoel-range-wrap" style="display:none;font-size:7.5px;color:#64748b;">Range: <span id="pdf-koersdoel-range"></span></div>
                         <div>Upside/downside: <span id="pdf-upside" style="font-weight:700;"></span></div>
                     </div>
                 </div>
@@ -1095,6 +1096,7 @@
                         </thead>
                         <tbody id="gev-tbody"></tbody>
                     </table>
+                    <div id="gev-narratief" style="display:none;margin-top:5px;font-size:7.5px;color:#1e3a8a;background:#eff6ff;border-left:2px solid #3b82f6;padding:4px 7px;line-height:1.5;border-radius:0 3px 3px 0;"></div>
                 </div>
 
                 <!-- ⑩ SCENARIO ANALYSE -->
@@ -1431,6 +1433,15 @@ function renderReport(fin, ai) {
     const leidendDoel = (aiKoersdoelNum && !isNaN(aiKoersdoelNum)) ? aiKoersdoelNum : doel;
 
     document.getElementById('pdf-koersdoel-header').textContent = leidendDoel ? fmt(leidendDoel) : 'N/B';
+
+    // Fix #1: toon bandbreedte naast koersdoel
+    const rangeStr = ai.koersdoelAfleiding?.koersdoelBandbreedte || null;
+    const rangeWrap = document.getElementById('pdf-koersdoel-range-wrap');
+    const rangeEl   = document.getElementById('pdf-koersdoel-range');
+    if (rangeWrap && rangeEl && rangeStr) {
+        rangeEl.textContent = rangeStr;
+        rangeWrap.style.display = 'block';
+    }
     if (koers && leidendDoel) {
         const upside = (((leidendDoel - koers) / koers) * 100).toFixed(1);
         const el = document.getElementById('pdf-upside');
@@ -1585,6 +1596,18 @@ function renderReport(fin, ai) {
         return `<tr><td style="padding:3px 6px;border:1px solid #e2e8f0;font-weight:600;color:#334155;background:#f1f5f9;">${g}</td>${cells}</tr>`;
     }).join('');
 
+    // Fix #4: narratieve duiding van geselecteerde cel in gevoeligheidsmatrix
+    const baseCaseToel = gev.baseCaseToelichting || null;
+    const gevNarrEl = document.getElementById('gev-narratief');
+    if (gevNarrEl) {
+        if (baseCaseToel) {
+            gevNarrEl.textContent = baseCaseToel;
+            gevNarrEl.style.display = 'block';
+        } else {
+            gevNarrEl.style.display = 'none';
+        }
+    }
+
     const kleurMap = { Bull: 'sc-bull', Base: 'sc-base', Bear: 'sc-bear' };
     const scenarios = ai.scenarios || [];
     document.getElementById('scenarios-container').innerHTML = scenarios.map(s => {
@@ -1618,6 +1641,7 @@ function renderReport(fin, ai) {
     }).join('');
 
     const directe = ai.peers?.directe || [];
+    const sectorGem = ai.peers?.sectorGemiddelde || null;
     document.getElementById('peers-direct-tbody').innerHTML = directe.map((p, i) => {
         const bg = i % 2 === 0 ? '#f8fafc' : '#ffffff';
         return `<tr style="background:${bg};">
@@ -1629,8 +1653,23 @@ function renderReport(fin, ai) {
             <td style="padding:4px 6px;border:1px solid #e2e8f0;text-align:center;">${p.fcfYield || '—'}</td>
             <td style="padding:4px 6px;border:1px solid #e2e8f0;text-align:center;">${p.nettomarge || '—'}</td>
             <td style="padding:4px 6px;border:1px solid #e2e8f0;color:#475569;font-size:8px;">${p.relevantie || ''}</td>
-        </tr>`;
+        </tr>\`;
     }).join('');
+
+    // Fix #5: voeg gewogen sectorgemiddelde toe als footer rij
+    if (sectorGem) {
+        document.getElementById('peers-direct-tbody').innerHTML +=
+            `<tr style="background:#f1f5f9;border-top:2px solid #94a3b8;">
+                <td style="padding:4px 6px;border:1px solid #e2e8f0;font-weight:700;color:#334155;font-size:8px;">Sectorgemiddelde</td>
+                <td style="padding:4px 6px;border:1px solid #e2e8f0;text-align:center;font-size:8px;color:#64748b;">—</td>
+                <td style="padding:4px 6px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#0f172a;">${sectorGem.forwardPE || '—'}</td>
+                <td style="padding:4px 6px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#0f172a;">${sectorGem.evEbitda || '—'}</td>
+                <td style="padding:4px 6px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#0f172a;">${sectorGem.pegRatio || '—'}</td>
+                <td style="padding:4px 6px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#0f172a;">${sectorGem.fcfYield || '—'}</td>
+                <td style="padding:4px 6px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#0f172a;">${sectorGem.nettomarge || '—'}</td>
+                <td style="padding:4px 6px;border:1px solid #e2e8f0;color:#475569;font-size:7.5px;font-style:italic;">${sectorGem.berekeningsNoot || ''}</td>
+            </tr>\`;
+    }
 
     const moat = ai.peers?.monopoliepremie || [];
     document.getElementById('peers-moat-tbody').innerHTML = moat.map((p, i) => {
